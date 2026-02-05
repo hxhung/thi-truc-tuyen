@@ -1,1 +1,45 @@
-<h1>Hệ thống thi trực tuyến - hxhung</h1>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vào Phòng Thi</title>
+    <meta charset="UTF-8">
+    <script src="assets/js/api-connector.js"></script>
+</head>
+<body>
+    <div id="login-box">
+        <h2>NHẬP MÃ ĐỀ THI</h2>
+        <input type="text" id="examId" placeholder="Ví dụ: TOAN10">
+        
+        <div id="late-section" style="display:none;">
+            <p style="color:red;">Bạn đã muộn quá 5 phút. Nhập mã ưu tiên:</p>
+            <input type="text" id="lateCode" placeholder="Mã từ giám thị">
+        </div>
+        
+        <button onclick="handleJoin()">Vào Thi</button>
+        <p id="msg"></p>
+    </div>
+
+    <script>
+        async function handleJoin() {
+            const eid = document.getElementById('examId').value;
+            const lcode = document.getElementById('lateCode').value;
+            const msg = document.getElementById('msg');
+
+            msg.innerText = "Đang kiểm tra...";
+            const res = await checkExamAccess(eid, lcode);
+
+            if (res.success) {
+                alert(`${res.message} \nThời gian còn lại: ${res.remainingMinutes} phút`);
+                // Lưu thông tin và chuyển sang trang exam.html
+                sessionStorage.setItem('currentExam', JSON.stringify(res));
+                window.location.href = 'exam.html';
+            } else {
+                msg.innerText = res.message;
+                if (res.status === "REQUIRE_CODE") {
+                    document.getElementById('late-section').style.display = 'block';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
