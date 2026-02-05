@@ -1,0 +1,5 @@
+3. Quản lý Hình ảnh & Đồ thị
+Như đã thống nhất, để tối ưu bộ môn Toán, bạn hãy đẩy ảnh lên GitHub theo cấu trúc: assets/images/exams/[examId]/cau1.png.
+Khi render câu hỏi, logic JavaScript sẽ như sau:
+Nếu câu hỏi có ảnh, tạo thẻ <img> với src trỏ về folder tương ứng trên GitHub.
+KaTeX sẽ quét toàn bộ nội dung văn bản, tìm các ký hiệu $...$ để chuyển thành công thức đẹp mắt.
