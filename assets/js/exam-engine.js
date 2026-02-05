@@ -14,27 +14,39 @@ window.onload = async function() {
 
 function renderQuestions(questions) {
     const container = document.getElementById('questions');
+    container.innerHTML = ''; // Xóa chữ "Đang tải"
+
     questions.forEach((q, idx) => {
         let qHtml = `<div class="question-card" data-id="${q.id}" data-type="${q.type}">
             <p><strong>Câu ${idx + 1}:</strong> ${q.content}</p>`;
         
-        if (q.image) qHtml += `<img src="assets/images/exams/${q.image}" class="img-fluid">`;
+        // Nếu có ảnh, hiển thị ảnh. Nếu q.image đã có path thì không cộng thêm assets/...
+        if (q.image) {
+            const imgPath = q.image.startsWith('http') ? q.image : `assets/images/exams/${q.image}`;
+            qHtml += `<div class="question-image"><img src="${imgPath}" style="max-width:100%;"></div>`;
+        }
 
+        qHtml += `<div class="options-grid">`;
         if (q.type === "FILL_IN") {
-            qHtml += `<input type="text" class="ans-input" placeholder="Đáp án...">`;
+            qHtml += `<input type="text" class="ans-input" placeholder="Nhập đáp án...">`;
         } else {
             for (let opt in q.options) {
                 if (q.options[opt]) {
-                    qHtml += `<label><input type="radio" name="q${q.id}" value="${opt}"> ${opt}. ${q.options[opt]}</label><br>`;
+                    qHtml += `<label style="display:block;"><input type="radio" name="q${q.id}" value="${opt}"> ${opt}. ${q.options[opt]}</label>`;
                 }
             }
         }
-        qHtml += `</div><hr>`;
+        qHtml += `</div></div><hr>`;
         container.innerHTML += qHtml;
     });
 
-    // Gọi KaTeX render công thức Toán
-    renderMathInElement(document.body, { delimiters: [{left: "$", right: "$", display: false}] });
+    // Kích hoạt KaTeX để hiển thị công thức toán từ dữ liệu JSON (image_bf1103.png)
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+        ]
+    });
 }
 
 async function submitExam() {
