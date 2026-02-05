@@ -1,9 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <title>Vào Phòng Thi</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="assets/js/api-connector.js"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; }
+        #login-box { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        #msg { margin-top: 15px; color: red; font-size: 14px; }
+    </style>
 </head>
 <body>
     <div id="login-box">
@@ -11,7 +20,7 @@
         <input type="text" id="examId" placeholder="Ví dụ: TOAN10">
         
         <div id="late-section" style="display:none;">
-            <p style="color:red;">Bạn đã muộn quá 5 phút. Nhập mã ưu tiên:</p>
+            <p style="color:red; font-size: 13px;">Bạn đã muộn. Nhập mã ưu tiên:</p>
             <input type="text" id="lateCode" placeholder="Mã từ giám thị">
         </div>
         
@@ -21,23 +30,56 @@
 
     <script>
         async function handleJoin() {
-            const eid = document.getElementById('examId').value;
+            const eidInput = document.getElementById('examId');
+            const eid = eidInput.value.trim();
             const lcode = document.getElementById('lateCode').value;
             const msg = document.getElementById('msg');
+            const btn = document.querySelector('button');
 
-            msg.innerText = "Đang kiểm tra...";
-            const res = await checkExamAccess(eid, lcode);
+            if (!eid) {
+                msg.innerText = "Vui lòng nhập mã đề thi!";
+                return;
+            }
 
-            if (res.success) {
-                alert(`${res.message} \nThời gian còn lại: ${res.remainingMinutes} phút`);
-                // Lưu thông tin và chuyển sang trang exam.html
-                sessionStorage.setItem('currentExam', JSON.stringify(res));
-                window.location.href = 'exam.html';
-            } else {
-                msg.innerText = res.message;
-                if (res.status === "REQUIRE_CODE") {
-                    document.getElementById('late-section').style.display = 'block';
+            msg.innerText = "Đang kết nối hệ thống...";
+            msg.style.color = "blue";
+            btn.disabled = true;
+
+            try {
+                // Gọi API kiểm tra
+                const res = await checkExamAccess(eid, lcode);
+
+                // LOGIC MỚI: Khớp với dữ liệu {"success":true, "duration":60, ...}
+                if (res.success) {
+                    // Lấy thời gian (ưu tiên 'duration' từ API mới)
+                    const minutes = res.duration || 60; 
+                    
+                    alert(`Tìm thấy đề thi!\nThời gian làm bài: ${minutes} phút`);
+                    
+                    // Chuẩn hóa dữ liệu để lưu vào bộ nhớ (cho exam.html dùng)
+                    const examData = {
+                        examId: res.examId || eid,
+                        remainingMinutes: minutes
+                    };
+                    sessionStorage.setItem('currentExam', JSON.stringify(examData));
+                    
+                    // Chuyển trang
+                    window.location.href = 'exam.html';
+                } else {
+                    // Xử lý lỗi
+                    msg.innerText = res.message || "Mã đề không đúng hoặc chưa kích hoạt.";
+                    msg.style.color = "red";
+                    
+                    if (res.status === "REQUIRE_CODE") {
+                        document.getElementById('late-section').style.display = 'block';
+                    }
                 }
+            } catch (err) {
+                console.error(err);
+                msg.innerText = "Lỗi kết nối. Vui lòng thử lại!";
+                msg.style.color = "red";
+            } finally {
+                btn.disabled = false;
             }
         }
     </script>
