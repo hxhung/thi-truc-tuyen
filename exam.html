@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đang làm bài thi</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" 
+            onload="renderMathInElement(document.body);"></script>
+    
+    <style>
+        #timer { font-size: 24px; font-weight: bold; color: red; position: fixed; top: 10px; right: 10px; }
+        .question-image { max-width: 100%; height: auto; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div id="timer">00:00</div>
+    
+    <div id="exam-container">
+        <h2 id="exam-title">Đang tải đề thi...</h2>
+        <div id="questions"></div>
+        <button onclick="submitExam()">Nộp bài</button>
+    </div>
+
+    <script src="assets/js/exam-engine.js"></script>
+</body>
+</html>
