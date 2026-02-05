@@ -8,7 +8,7 @@ async function loadExamData() {
     if (!sessionData) { window.location.href = 'index.html'; return; }
 
     // DÙNG LINK API CỦA BẠN (Đã lấy từ hình image_c16625.png)
-    const apiUrl = `https://script.google.com/macros/s/AKfycbzbs0nKtBDAE1Q4BzkJx3ANFpkp1Qz0-K-A6SYT4QMha10PgJjsBAuVUmxqvTUp7aZTag/exec?action=getQuestions&examId=${sessionData.examId}`;
+    const apiUrl = `https://script.google.com/macros/s/AKfycbzbs0nKtBDAE1Q4BzkJx3ANFpkp1Qz0-K-A6SYT4QMha10PgJjsBAuVUmxqvTUp7aZTag/exec?action=getQuestions&examId=$`;
 
     try {
         const response = await fetch(apiUrl);
