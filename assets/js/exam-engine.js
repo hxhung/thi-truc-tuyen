@@ -19,7 +19,7 @@ async function loadExamData() {
         return;
     }
 
-    const apiUrl = `YOUR_APPS_SCRIPT_URL?action=getQuestions&examId=${sessionData.examId}`;
+    const apiUrl = `https://script.google.com/macros/s/AKfycbzbs0nKtBDaE1Q4BzkJx3ANFpkp1QzO-K-A6SYT4QMha1OPgJjsBAuVUmxqvtUp7aZTag/exec?action=getQuestions&examId=${sessionData.examId}`;
 
     try {
         const response = await fetch(apiUrl);
