@@ -14,39 +14,47 @@ window.onload = async function() {
 
 function renderQuestions(questions) {
     const container = document.getElementById('questions');
-    container.innerHTML = ''; // Xóa chữ "Đang tải"
+    if (!container) return;
+    container.innerHTML = ''; 
 
     questions.forEach((q, idx) => {
         let qHtml = `<div class="question-card" data-id="${q.id}" data-type="${q.type}">
             <p><strong>Câu ${idx + 1}:</strong> ${q.content}</p>`;
         
-        // Nếu có ảnh, hiển thị ảnh. Nếu q.image đã có path thì không cộng thêm assets/...
-        if (q.image) {
+        // Chỉ hiển thị ảnh nếu dữ liệu image có chứa đuôi file ảnh (png, jpg,...)
+        if (q.image && q.image.match(/\.(jpeg|jpg|gif|png)$/i)) {
             const imgPath = q.image.startsWith('http') ? q.image : `assets/images/exams/${q.image}`;
-            qHtml += `<div class="question-image"><img src="${imgPath}" style="max-width:100%;"></div>`;
+            qHtml += `<div class="question-image"><img src="${imgPath}" style="max-width:100%; border-radius:5px;"></div>`;
         }
 
         qHtml += `<div class="options-grid">`;
         if (q.type === "FILL_IN") {
-            qHtml += `<input type="text" class="ans-input" placeholder="Nhập đáp án...">`;
+            qHtml += `<input type="text" class="ans-input" placeholder="Nhập đáp án của bạn...">`;
         } else {
             for (let opt in q.options) {
                 if (q.options[opt]) {
-                    qHtml += `<label style="display:block;"><input type="radio" name="q${q.id}" value="${opt}"> ${opt}. ${q.options[opt]}</label>`;
+                    qHtml += `
+                        <label style="display:block; margin: 8px 0; cursor:pointer;">
+                            <input type="radio" name="q${q.id}" value="${opt}"> 
+                            <strong>${opt}.</strong> ${q.options[opt]}
+                        </label>`;
                 }
             }
         }
-        qHtml += `</div></div><hr>`;
+        qHtml += `</div></div><hr style="border: 0.5px solid #eee; margin: 20px 0;">`;
         container.innerHTML += qHtml;
     });
 
-    // Kích hoạt KaTeX để hiển thị công thức toán từ dữ liệu JSON (image_bf1103.png)
-    renderMathInElement(document.body, {
-        delimiters: [
-            {left: "$$", right: "$$", display: true},
-            {left: "$", right: "$", display: false}
-        ]
-    });
+    // Kích hoạt hiển thị công thức Toán (KaTeX)
+    if (typeof renderMathInElement === 'function') {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });
+    }
 }
 
 async function submitExam() {
