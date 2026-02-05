@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwO7wkbbtbnxnnN5LOmM_AXBcPpjz3ksSQHDkmQmFu8kM3xzLUflLh7-0-5P4_jadbIEw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzbs0nKtBDaE1Q4BzkJx3ANFpkp1QzO-K-A6SYT4QMha1OPgJjsBAuVUmxqvtUp7aZTag/exec";
 
 async function checkExamAccess(examId, lateCode = "") {
     const url = `${API_URL}?action=checkAccess&examId=${examId}&lateCode=${lateCode}`;
