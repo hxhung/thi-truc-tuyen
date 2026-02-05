@@ -12,6 +12,19 @@
         #timer { font-size: 24px; font-weight: bold; color: red; position: fixed; top: 10px; right: 10px; }
         .question-image { max-width: 100%; height: auto; margin: 10px 0; }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ]
+        });
+    });
+</script>
 </head>
 <body>
     <div id="timer">00:00</div>
