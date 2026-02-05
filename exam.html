@@ -5,59 +5,203 @@
     <title>Làm Bài Thi</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- KaTeX cho LaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
-    <script src="assets/js/api-connector.js"></script>
-
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background: #f9f9f9; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: #f5f5f5; 
+        }
+        
+        /* Header */
+        #header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #exam-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
         
         /* Đồng hồ đếm ngược */
-        #timer-box { 
-            position: fixed; top: 10px; right: 10px; 
-            background: #ff4444; color: white; padding: 10px 20px; 
-            border-radius: 5px; font-weight: bold; font-size: 18px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;
+        #timer { 
+            background: #ff4444; 
+            color: white; 
+            padding: 15px 25px; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 24px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            min-width: 100px;
+            text-align: center;
         }
 
-        /* Thẻ câu hỏi */
-        .question-card {
-            background: white; padding: 20px; margin-bottom: 20px;
-            border-radius: 8px; border: 1px solid #ddd;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        /* Container câu hỏi */
+        #questions {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 300px;
         }
-        .question-content { font-size: 16px; margin-bottom: 15px; }
-        .question-image img { max-width: 100%; height: auto; margin: 10px 0; border: 1px solid #eee; }
-        
+
+        /* Loading state */
+        .loading {
+            text-align: center;
+            color: #666;
+            font-size: 18px;
+            padding: 50px 0;
+        }
+
+        .error {
+            text-align: center;
+            color: #ff4444;
+            font-size: 18px;
+            padding: 50px 0;
+            background: #fff3f3;
+            border: 2px solid #ffcccc;
+            border-radius: 8px;
+        }
+
+        /* Câu hỏi */
+        .question-item {
+            padding: 20px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .question-item:last-child {
+            border-bottom: none;
+        }
+
+        .question-item strong {
+            color: #007bff;
+            font-size: 18px;
+        }
+
+        .question-item p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+
         /* Đáp án */
-        .options-grid label { display: block; margin: 8px 0; cursor: pointer; }
-        .ans-input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* Nút nộp bài */
-        #submit-btn {
-            display: block; width: 100%; padding: 15px; 
-            background: #28a745; color: white; border: none; 
-            font-size: 18px; font-weight: bold; border-radius: 5px; 
-            cursor: pointer; margin-top: 30px;
+        .question-item label {
+            display: block;
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+            transition: background 0.2s;
         }
-        #submit-btn:hover { background: #218838; }
+
+        .question-item label:hover {
+            background: #f0f8ff;
+        }
+
+        .question-item input[type="radio"] {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .question-item input[type="text"] {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 2px solid #007bff;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        /* Câu dẫn (Root) */
+        .root-title {
+            background: #f1f8ff;
+            padding: 15px;
+            font-weight: bold;
+            margin-top: 20px;
+            border-left: 5px solid #007bff;
+            border-radius: 4px;
+            font-size: 18px;
+        }
+
+        /* Nút nộp bài */
+        #submitBtn {
+            display: block;
+            width: 100%;
+            padding: 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+        #submitBtn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+        }
+
+        #submitBtn:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            #header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            #timer {
+                margin-top: 15px;
+            }
+
+            #exam-title {
+                font-size: 20px;
+            }
+        }
     </style>
 </head>
 <body>
 
-    <div id="timer-box">00:00</div>
-
-    <h2 style="text-align:center;">BÀI THI TRỰC TUYẾN</h2>
-    <hr>
-
-    <div id="questions">
-        <p style="text-align:center; color:gray;">Đang tải câu hỏi...</p>
+    <!-- Header với tên đề thi và timer -->
+    <div id="header">
+        <div id="exam-title">Đang tải đề thi...</div>
+        <div id="timer">00:00</div>
     </div>
 
-    <button id="submit-btn" onclick="submitExam()">NỘP BÀI</button>
+    <!-- Container câu hỏi -->
+    <div id="questions">
+        <p class="loading">⏳ Đang tải câu hỏi...</p>
+    </div>
 
+    <!-- Nút nộp bài -->
+    <button id="submitBtn">NỘP BÀI</button>
+
+    <!-- Load JavaScript -->
     <script src="assets/js/exam-engine.js"></script>
 
 </body>
