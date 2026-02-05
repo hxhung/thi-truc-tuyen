@@ -2,39 +2,63 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Đang làm bài thi</title>
+    <title>Làm Bài Thi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" 
-            onload="renderMathInElement(document.body);"></script>
-    
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+    <script src="assets/js/api-connector.js"></script>
+
     <style>
-        #timer { font-size: 24px; font-weight: bold; color: red; position: fixed; top: 10px; right: 10px; }
-        .question-image { max-width: 100%; height: auto; margin: 10px 0; }
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; background: #f9f9f9; }
+        
+        /* Đồng hồ đếm ngược */
+        #timer-box { 
+            position: fixed; top: 10px; right: 10px; 
+            background: #ff4444; color: white; padding: 10px 20px; 
+            border-radius: 5px; font-weight: bold; font-size: 18px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 1000;
+        }
+
+        /* Thẻ câu hỏi */
+        .question-card {
+            background: white; padding: 20px; margin-bottom: 20px;
+            border-radius: 8px; border: 1px solid #ddd;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .question-content { font-size: 16px; margin-bottom: 15px; }
+        .question-image img { max-width: 100%; height: auto; margin: 10px 0; border: 1px solid #eee; }
+        
+        /* Đáp án */
+        .options-grid label { display: block; margin: 8px 0; cursor: pointer; }
+        .ans-input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Nút nộp bài */
+        #submit-btn {
+            display: block; width: 100%; padding: 15px; 
+            background: #28a745; color: white; border: none; 
+            font-size: 18px; font-weight: bold; border-radius: 5px; 
+            cursor: pointer; margin-top: 30px;
+        }
+        #submit-btn:hover { background: #218838; }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        renderMathInElement(document.body, {
-            delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false}
-            ]
-        });
-    });
-</script>
 </head>
 <body>
-    <div id="timer">00:00</div>
-    
-    <div id="exam-container">
-        <h2 id="exam-title">Đang tải đề thi...</h2>
-        <div id="questions"></div>
-        <button onclick="submitExam()">Nộp bài</button>
+
+    <div id="timer-box">00:00</div>
+
+    <h2 style="text-align:center;">BÀI THI TRỰC TUYẾN</h2>
+    <hr>
+
+    <div id="questions">
+        <p style="text-align:center; color:gray;">Đang tải câu hỏi...</p>
     </div>
-<script src="assets/js/api-connector.js"></script>
+
+    <button id="submit-btn" onclick="submitExam()">NỘP BÀI</button>
+
     <script src="assets/js/exam-engine.js"></script>
+
 </body>
 </html>
