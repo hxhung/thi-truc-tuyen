@@ -10,78 +10,125 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <link rel="stylesheet" href="assets/css/style.css">
-    <style>
-        /* --- CSS MỚI BỔ SUNG --- */
-        
-        /* 1. Header & Timer */
-        #header {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #fff; padding: 15px 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            position: sticky; top: 0; z-index: 100;
-        }
-        #exam-title { font-size: 18px; font-weight: bold; color: #007bff; }
-        #timer { font-size: 20px; font-weight: bold; color: #333; background: #f8f9fa; padding: 5px 15px; border-radius: 20px; border: 2px solid #ddd; }
+<style>
+    /* --- CẤU TRÚC CHUNG --- */
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; color: #333; }
+    
+    /* Header cố định */
+    #header {
+        display: flex; justify-content: space-between; align-items: center;
+        background: #fff; padding: 15px 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        position: sticky; top: 0; z-index: 100;
+    }
+    #exam-title { font-size: 18px; font-weight: 700; color: #0056b3; text-transform: uppercase; }
+    #timer { font-size: 20px; font-weight: 700; color: #333; background: #e9ecef; padding: 6px 16px; border-radius: 30px; }
 
-        /* 2. Sửa style Câu dẫn Phần II (Mục 4) */
-        .root-title {
-            font-weight: normal !important; /* Bỏ in đậm */
-            color: #000 !important;         /* Màu đen */
-            background: #fff !important;
-            border-left: 4px solid #666 !important;
-            padding: 10px; margin-bottom: 10px;
-            font-style: italic;
-        }
+    /* Container chính */
+    #exam-container { max-width: 900px; margin: 30px auto; padding-bottom: 100px; padding-left: 15px; padding-right: 15px; }
 
-        /* 3. Modal Kết quả (Mục 5) */
-        #result-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); /* Tối hơn chút cho đẹp */
-            display: none; align-items: center; justify-content: center;
-            z-index: 9999;
-            backdrop-filter: blur(4px);
-            animation: fadeIn 0.3s ease-out;
-        }
+    /* Khung từng phần thi */
+    .exam-section {
+        background: #fff; border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        margin-bottom: 30px; overflow: hidden;
+    }
+    .section-header {
+        background: #007bff; color: #fff; padding: 15px 20px;
+        font-size: 16px; font-weight: bold; text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-        .modal-content {
-            background: white; padding: 40px 30px; border-radius: 20px;
-            max-width: 400px; width: 85%; text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-        }
+    /* --- GIAO DIỆN CÂU HỎI --- */
+    .question-item { padding: 20px; border-bottom: 1px solid #eee; }
+    .question-item:last-child { border-bottom: none; }
+    
+    /* Nội dung câu hỏi */
+    .q-content { font-size: 16px; margin-bottom: 15px; line-height: 1.5; }
+    .q-image img { max-width: 100%; height: auto; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; }
 
-        /* Loading Spinner */
-        .spinner {
-            width: 50px; height: 50px; 
-            border: 5px solid #f3f3f3; border-top: 5px solid #6a11cb; 
-            border-radius: 50%; margin: 20px auto;
-            animation: spin 1s linear infinite;
-        }
+    /* Phần II: Câu dẫn chung (Style nhẹ nhàng, không in đậm) */
+    .root-title {
+        padding: 15px 20px; background: #f8f9fa;
+        color: #000; font-style: italic;
+        border-left: 4px solid #6c757d; margin: 0;
+    }
 
-        /* Điểm số Gradient */
-        .score-gradient {
-            font-size: 64px; font-weight: 800; margin: 10px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            line-height: 1;
-        }
-        
-        .result-detail { font-size: 18px; color: #555; margin-bottom: 30px; }
+    /* --- STYLE CHO CÁC LOẠI CÂU HỎI --- */
 
-        .btn-group { display: flex; gap: 10px; justify-content: center; }
-        .btn-retry, .btn-home {
-            padding: 10px 20px; border: none; border-radius: 50px;
-            cursor: pointer; font-weight: 600; transition: transform 0.2s;
-        }
-        .btn-retry { background: #e2e6ea; color: #333; }
-        .btn-home { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .btn-retry:hover, .btn-home:hover { transform: scale(1.05); }
+    /* 1. Trắc nghiệm ABCD (Grid 2 cột) */
+    .options-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;
+    }
+    .option-label {
+        display: flex; align-items: center; cursor: pointer;
+        padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+        transition: 0.2s; background: #fff;
+    }
+    .option-label:hover { background: #f1f3f5; border-color: #adb5bd; }
+    .option-label input { margin-right: 10px; transform: scale(1.2); }
 
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideIn { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    </style>
+    /* 2. Đúng/Sai (Nằm ngang thẳng hàng) */
+    .tf-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 0; border-bottom: 1px dashed #eee;
+    }
+    .tf-row:last-child { border-bottom: none; }
+    .tf-content { flex: 1; padding-right: 20px; }
+    .tf-options {
+        display: flex; gap: 20px; min-width: 160px; justify-content: flex-end;
+    }
+    .tf-options label {
+        display: flex; align-items: center; gap: 5px; cursor: pointer; font-weight: 500;
+    }
+
+    /* 3. Điền khuyết */
+    .fill-input {
+        width: 100%; max-width: 400px; padding: 10px 15px;
+        border: 2px solid #ddd; border-radius: 6px; font-size: 16px;
+        transition: 0.3s;
+    }
+    .fill-input:focus { border-color: #007bff; outline: none; }
+
+    /* --- MODAL KẾT QUẢ --- */
+    #result-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+        display: none; align-items: center; justify-content: center; z-index: 9999;
+    }
+    .modal-content {
+        background: #fff; width: 90%; max-width: 450px;
+        padding: 40px; border-radius: 20px; text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: slideIn 0.4s ease;
+    }
+    .score-gradient {
+        font-size: 60px; font-weight: 800; margin: 15px 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .spinner {
+        width: 50px; height: 50px; border: 5px solid #f3f3f3;
+        border-top: 5px solid #6a11cb; border-radius: 50%;
+        margin: 0 auto 20px; animation: spin 1s linear infinite;
+    }
+    .btn-group { margin-top: 25px; display: flex; justify-content: center; gap: 15px; }
+    .btn-retry, .btn-home {
+        padding: 12px 25px; border: none; border-radius: 50px; cursor: pointer; font-weight: 600;
+    }
+    .btn-retry { background: #e9ecef; color: #333; }
+    .btn-home { background: #007bff; color: #fff; }
+
+    /* Responsive mobile */
+    @media (max-width: 600px) {
+        .options-grid { grid-template-columns: 1fr; } /* Trắc nghiệm thành 1 cột trên mobile */
+        .tf-row { flex-direction: column; align-items: flex-start; } /* Đúng sai xuống dòng trên mobile */
+        .tf-options { margin-top: 10px; width: 100%; justify-content: space-around; }
+    }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes slideIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+
 </head>
 <body>
 
