@@ -230,6 +230,30 @@
                 font-size: 20px;
             }
         }
+        /* Container chứa 2 lựa chọn Đúng/Sai */
+.question-item div[style*="margin-left:20px"] {
+    display: flex !important;
+    flex-direction: row;
+    gap: 40px; /* Khoảng cách giữa Đúng và Sai */
+    align-items: center;
+    margin-top: 10px !important;
+}
+
+/* Tinh chỉnh label để không chiếm hết dòng */
+.question-item[data-type="TRUE_FALSE"] label, 
+.question-item div[style*="margin-left:20px"] label {
+    display: inline-flex !important;
+    align-items: center;
+    width: auto !important;
+    margin: 0 !important;
+    cursor: pointer;
+}
+
+/* Đảm bảo radio button và chữ thẳng hàng */
+.question-item input[type="radio"] {
+    margin-bottom: 0;
+    margin-right: 8px;
+}
     </style>
 </head>
 <body>
