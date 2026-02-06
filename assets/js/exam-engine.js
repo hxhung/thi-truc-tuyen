@@ -168,7 +168,12 @@ window.submitExam = async function(force = false) {
 
     try {
         // Gửi kèm Tên và Lớp
-        const fullName = `${sessionData.studentName} - ${sessionData.studentClass}`;
+        const payload = {
+            examId: sessionData.examId,
+            studentName: sessionData.studentName,   // Tên riêng
+            studentClass: sessionData.studentClass, // Lớp riêng
+            answers: studentAnswers
+        };
         
         const res = await fetch(examConfig.api_endpoint, {
             method: 'POST',
