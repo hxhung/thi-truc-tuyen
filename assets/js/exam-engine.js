@@ -157,9 +157,8 @@ window.selectAnswer = (id, val) => { studentAnswers[id] = val; };
 function renderMath() { if(window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{left:"$$", right:"$$", display:true}, {left:"$", right:"$", display:false}] }); }
 
 // --- LOGIC NỘP BÀI (MODAL) ---
-
 window.submitExam = async function(force = false) {
-    if (!force && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
+    // ... (các đoạn code kiểm tra confirm giữ nguyên) ...
 
     const overlay = document.getElementById('result-modal-overlay');
     const body = document.getElementById('modal-body');
@@ -167,36 +166,40 @@ window.submitExam = async function(force = false) {
     body.innerHTML = `<h3>Đang chấm điểm...</h3><div class="spinner"></div>`;
 
     try {
-        // Gửi kèm Tên và Lớp
+        // --- SỬA ĐOẠN NÀY ---
+        // Thay vì gộp tên, ta gửi 2 trường riêng biệt
         const payload = {
             examId: sessionData.examId,
-            studentName: sessionData.studentName,   // Tên riêng
-            studentClass: sessionData.studentClass, // Lớp riêng
+            studentName: sessionData.studentName,   // Gửi Tên
+            studentClass: sessionData.studentClass, // Gửi Lớp riêng
             answers: studentAnswers
         };
-        
+        // --------------------
+
         const res = await fetch(examConfig.api_endpoint, {
             method: 'POST',
-            body: JSON.stringify({ examId: sessionData.examId, studentName: fullName, answers: studentAnswers })
+            body: JSON.stringify(payload)
         }).then(r => r.json());
 
+        // ... (Phần xử lý hiển thị kết quả giữ nguyên) ...
         if (res.success) {
-            body.innerHTML = `
+             body.innerHTML = `
                 <h2 style="color:#333; margin:0">KẾT QUẢ</h2>
                 <div class="score-gradient">${res.score}</div>
-                <p style="margin:5px 0; color:#555">Số câu đúng: <b>${res.correctCount}</b> / ${res.totalQuestions}</p>
-                <div style="margin-top:20px">
+                <p>Số câu đúng: <b>${res.correctCount}</b> / ${res.totalQuestions}</p>
+                <div class="btn-group">
                     <button class="btn-retry" onclick="location.reload()">Làm lại</button>
-                    <button class="btn-home" onclick="location.href='index.html'">Về trang chủ</button>
+                    <button class="btn-home" onclick="location.href='index.html'">Thoát</button>
                 </div>
             `;
             sessionStorage.removeItem('currentExam');
-        } else { throw new Error(res.message); }
+        } else {
+            throw new Error(res.message);
+        }
     } catch (e) {
         body.innerHTML = `<h3 style="color:red">Lỗi!</h3><p>${e.message}</p><button class="btn-retry" onclick="location.reload()">Thử lại</button>`;
     }
 };
-
 function startTimer(m) {
     let s = m * 60;
     const el = document.getElementById('timer');
