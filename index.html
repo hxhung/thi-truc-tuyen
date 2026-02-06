@@ -84,7 +84,7 @@
                     
                     try {
                         // Gọi API lấy câu hỏi ngay lập tức
-                        const qResponse = await fetch(`${API_URL}?action=getQuestions&examId=${eid}`);
+                        const qResponse = await fetch(API_URL + `?action=getQuestions&examId=${eid}`);
                         const qData = await qResponse.json();
                         
                         if (qData.success) {
