@@ -11,7 +11,40 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
-        /* Thêm vào phần <style> trong exam.html */
+        /* Style cho từng Phần */
+.exam-section {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.section-header {
+    background: #e9ecef;
+    padding: 15px;
+    margin: -20px -20px 20px -20px;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid #007bff;
+    font-weight: bold;
+    color: #333;
+    line-height: 1.5;
+}
+
+/* Đúng/Sai nằm trên 1 hàng (như yêu cầu trước) */
+.tf-options {
+    display: flex;
+    gap: 30px;
+    margin: 10px 0 10px 25px;
+}
+
+.tf-options label {
+    display: inline-flex !important;
+    align-items: center;
+    width: auto !important;
+    cursor: pointer;
+}
 
 /* Câu dẫn (Root) */
 .root-title {
