@@ -11,6 +11,53 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
+        /* Thêm vào phần <style> trong exam.html */
+
+/* Câu dẫn (Root) */
+.root-title {
+    background: #f1f8ff;
+    padding: 15px;
+    font-weight: bold;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    border-left: 5px solid #007bff;
+    border-radius: 4px;
+    font-size: 18px;
+}
+
+/* Câu hỏi chính */
+.question-item {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.question-item:last-child {
+    border-bottom: none;
+}
+
+/* Câu con TRUE_FALSE (a, b, c, d) */
+.sub-question {
+    margin-left: 30px;
+    padding: 10px 15px;
+    border-left: 2px dashed #ccc;
+    background: #f9f9f9;
+}
+
+.sub-question strong {
+    color: #007bff;
+    margin-right: 8px;
+}
+
+/* Đáp án */
+.question-item label {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.question-item label:hover {
+    background: #f0f8ff;
+}
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px; 
