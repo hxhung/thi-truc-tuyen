@@ -53,10 +53,12 @@
     <script src="assets/js/api-connector.js"></script>
     <script>
         async function checkExam() {
+            // Lấy dữ liệu từ ô nhập
             const eid = document.getElementById('exam-code').value.trim().toUpperCase();
             const name = document.getElementById('student-name').value.trim();
-            const sClass = document.getElementById('student-class').value.trim(); // Lấy Lớp
-            const late = document.getElementById('late-code').value.trim();
+            const sClass = document.getElementById('student-class').value.trim();
+            const late = document.getElementById('late-code').value.trim(); // Biến này tên là 'late'
+            
             const btn = document.getElementById('btn-login');
             const msg = document.getElementById('msg');
 
@@ -70,52 +72,57 @@
             btn.disabled = true;
 
             try {
-                // Gọi API kiểm tra (Logic cũ giữ nguyên)
+                // SỬA LỖI: Truyền đúng biến 'late' vào hàm (Code cũ của bạn đang ghi 'lateCode' gây lỗi)
                 const res = await checkExamAccess(eid, late); 
 
-                // --- Trong file index.html, tìm đoạn xử lý res.success ---
-
-if (res.success) {
-    const minutes = res.duration || 60;
-    
-    // BƯỚC 1: Hiện thông báo đang tải đề (Thay vì alert ngay)
-    msg.innerText = "Đang tải dữ liệu đề thi...";
-    msg.style.color = "blue";
-    
-    // BƯỚC 2: Gọi lệnh lấy câu hỏi NGAY LẬP TỨC
-    try {
-        const qResponse = await fetch(`${API_URL}?action=getQuestions&examId=${eid}`);
-        const qData = await qResponse.json();
-        
-        if (qData.success) {
-            // BƯỚC 3: Lưu cả thông tin thi VÀ bộ câu hỏi vào Session
-            const examData = {
-                examId: res.examId || eid,
-                title: res.title,
-                duration: minutes,
-                studentName: name,
-                studentClass: sClass,
-                questions: qData.data // <--- LƯU CÂU HỎI LUÔN
-            };
-            sessionStorage.setItem('currentExam', JSON.stringify(examData));
-            
-            // Vào thi luôn (Học sinh sẽ thấy hiện ra ngay lập tức)
-            window.location.href = 'exam.html';
-        } else {
-            msg.innerText = "Lỗi: Không tải được câu hỏi.";
-        }
-    } catch (e) {
-        msg.innerText = "Mất kết nối khi tải đề.";
-    }
-} else {
+                if (res.success) {
+                    const minutes = res.duration || 60;
+                    
+                    // --- BẮT ĐẦU TẢI ĐỀ THI SỚM (PRE-LOADING) ---
+                    msg.innerText = "Đang tải dữ liệu đề thi...";
+                    msg.style.color = "blue";
+                    
+                    try {
+                        // Gọi API lấy câu hỏi ngay lập tức
+                        const qResponse = await fetch(`${API_URL}?action=getQuestions&examId=${eid}`);
+                        const qData = await qResponse.json();
+                        
+                        if (qData.success) {
+                            // Lưu thông tin vào Session
+                            const examData = {
+                                examId: res.examId || eid,
+                                title: res.title,
+                                duration: minutes,
+                                studentName: name,
+                                studentClass: sClass,
+                                questions: qData.data // Lưu luôn bộ câu hỏi
+                            };
+                            sessionStorage.setItem('currentExam', JSON.stringify(examData));
+                            
+                            // Chuyển trang vào thi ngay
+                            window.location.href = 'exam.html';
+                        } else {
+                            msg.innerText = "Lỗi: Không tải được câu hỏi.";
+                            msg.style.color = "red";
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        msg.innerText = "Mất kết nối khi tải đề.";
+                        msg.style.color = "red";
+                    }
+                } else {
+                    // Xử lý khi mã đề sai hoặc chưa đến giờ
                     msg.innerText = res.message || "Mã đề không đúng.";
+                    msg.style.color = "red";
+                    
                     if (res.status === "REQUIRE_CODE") {
                         document.getElementById('late-section').style.display = 'block';
                     }
                 }
             } catch (err) {
                 console.error(err);
-                msg.innerText = "Lỗi kết nối!";
+                msg.innerText = "Lỗi kết nối server!";
+                msg.style.color = "red";
             } finally {
                 btn.disabled = false;
             }
