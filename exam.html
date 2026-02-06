@@ -5,401 +5,107 @@
     <title>Làm Bài Thi</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- KaTeX cho LaTeX -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
+    <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        /* === BASE STYLES === */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* --- CSS MỚI BỔ SUNG --- */
         
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px; 
-            max-width: 900px; 
-            margin: 0 auto; 
-            background: #f5f5f5; 
-        }
-        
-        /* === HEADER === */
+        /* 1. Header & Timer */
         #header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            display: flex; justify-content: space-between; align-items: center;
+            background: #fff; padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky; top: 0; z-index: 100;
         }
-        
-        #exam-title {
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        #timer { 
-            background: #ff4444; 
-            color: white; 
-            padding: 15px 25px; 
-            border-radius: 8px; 
-            font-weight: bold; 
-            font-size: 24px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            min-width: 100px;
-            text-align: center;
-        }
+        #exam-title { font-size: 18px; font-weight: bold; color: #007bff; }
+        #timer { font-size: 20px; font-weight: bold; color: #333; background: #f8f9fa; padding: 5px 15px; border-radius: 20px; border: 2px solid #ddd; }
 
-        /* === QUESTIONS CONTAINER === */
-        #questions {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            min-height: 300px;
-        }
-
-        .loading, .error {
-            text-align: center;
-            font-size: 18px;
-            padding: 50px 0;
-        }
-        
-        .loading { color: #666; }
-        
-        .error {
-            color: #ff4444;
-            background: #fff3f3;
-            border: 2px solid #ffcccc;
-            border-radius: 8px;
-        }
-
-        /* === EXAM SECTIONS === */
-        .exam-section {
-            background: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .section-header {
-            background: #e9ecef;
-            padding: 15px;
-            margin: -20px -20px 20px -20px;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 2px solid #007bff;
-            font-weight: bold;
-            color: #333;
-            line-height: 1.5;
-            font-size: 18px;
-        }
-
-        /* === QUESTIONS === */
-        .question-item {
-            padding: 15px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .question-item:last-child {
-            border-bottom: none;
-        }
-
-        .question-item strong {
-            color: #007bff;
-            font-size: 18px;
-        }
-
-        .question-item p {
-            margin: 10px 0;
-            line-height: 1.6;
-        }
-
-        /* === ROOT TITLE (Câu dẫn Phần II) === */
+        /* 2. Sửa style Câu dẫn Phần II (Mục 4) */
         .root-title {
-            background: #f8f9fa;
-            padding: 15px;
-            font-weight: normal;  /* ← SỬA: Bỏ in đậm */
-            color: #000;          /* ← SỬA: Màu đen */
-            margin-top: 25px;
-            margin-bottom: 15px;
-            border-left: 5px solid #007bff;
-            border-radius: 4px;
-            font-size: 17px;
+            font-weight: normal !important; /* Bỏ in đậm */
+            color: #000 !important;         /* Màu đen */
+            background: #fff !important;
+            border-left: 4px solid #666 !important;
+            padding: 10px; margin-bottom: 10px;
+            font-style: italic;
         }
 
-        /* === SUB QUESTIONS (a, b, c, d trong Đúng/Sai) === */
-        .exam-section:nth-child(2) .question-item {
-            padding-left: 30px;
-            border-bottom: none;
-            margin-bottom: 5px;
-        }
-
-        /* === OPTIONS === */
-        .question-item label {
-            display: block;
-            margin: 10px 0;
-            cursor: pointer;
-            padding: 10px;
-            border-radius: 4px;
-            transition: background 0.2s;
-        }
-
-        .question-item label:hover {
-            background: #f0f8ff;
-        }
-
-        .question-item input[type="radio"] {
-            margin-right: 10px;
-            cursor: pointer;
-        }
-
-        .question-item input[type="text"] {
-            width: 100%;
-            max-width: 300px;
-            padding: 10px;
-            border: 2px solid #007bff;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-
-        /* === TRUE/FALSE OPTIONS (Đúng/Sai nằm ngang) === */
-        .tf-options {
-            display: flex;
-            gap: 30px;
-            margin: 10px 0 10px 25px;
-        }
-
-        .tf-options label {
-            display: inline-flex !important;
-            align-items: center;
-            width: auto !important;
-            cursor: pointer;
-        }
-
-        /* === SUBMIT BUTTON === */
-        #submitBtn {
-            display: block;
-            width: 100%;
-            padding: 20px;
-            background: #28a745;
-            color: white;
-            border: none;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: all 0.3s;
-        }
-
-        #submitBtn:hover {
-            background: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0,0,0,0.15);
-        }
-
-        #submitBtn:active {
-            transform: translateY(0);
-        }
-
-        /* === MODAL STYLES === */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 2000;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .modal-overlay.show {
-            display: flex;
-            justify-content: center;
-            align-items: center;
+        /* 3. Modal Kết quả (Mục 5) */
+        #result-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); /* Tối hơn chút cho đẹp */
+            display: none; align-items: center; justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease-out;
         }
 
         .modal-content {
-            background: white;
-            padding: 50px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
-            animation: slideIn 0.4s ease;
+            background: white; padding: 40px 30px; border-radius: 20px;
+            max-width: 400px; width: 85%; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 50px; height: 50px; 
+            border: 5px solid #f3f3f3; border-top: 5px solid #6a11cb; 
+            border-radius: 50%; margin: 20px auto;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Điểm số Gradient */
+        .score-gradient {
+            font-size: 64px; font-weight: 800; margin: 10px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            line-height: 1;
         }
         
-        @keyframes slideIn {
-            from { 
-                opacity: 0;
-                transform: translateY(-40px) scale(0.9);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
+        .result-detail { font-size: 18px; color: #555; margin-bottom: 30px; }
+
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        .btn-retry, .btn-home {
+            padding: 10px 20px; border: none; border-radius: 50px;
+            cursor: pointer; font-weight: 600; transition: transform 0.2s;
         }
+        .btn-retry { background: #e2e6ea; color: #333; }
+        .btn-home { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-retry:hover, .btn-home:hover { transform: scale(1.05); }
 
-        .modal-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-        }
-
-        .modal-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 30px;
-        }
-
-        /* Spinner Loading */
-        .spinner {
-            border: 6px solid #f3f3f3;
-            border-top: 6px solid #007bff;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .modal-text {
-            font-size: 16px;
-            color: #666;
-            margin-top: 15px;
-        }
-
-        /* Result Modal */
-        .score-display {
-            font-size: 64px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 20px 0;
-        }
-
-        .result-details {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 20px 0;
-        }
-
-        .result-details p {
-            margin: 10px 0;
-            font-size: 18px;
-            color: #555;
-        }
-
-        .modal-btn {
-            padding: 16px 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 10px;
-            transition: all 0.3s;
-        }
-
-        .modal-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        /* === RESPONSIVE === */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            #header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            #timer {
-                margin-top: 15px;
-            }
-
-            #exam-title {
-                font-size: 20px;
-            }
-            
-            .modal-content {
-                padding: 30px 20px;
-            }
-            
-            .score-display {
-                font-size: 48px;
-            }
-        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
     <div id="header">
         <div id="exam-title">Đang tải đề thi...</div>
-        <div id="timer">00:00</div>
+        <div id="timer">--:--</div>
     </div>
 
-    <!-- QUESTIONS CONTAINER -->
-    <div id="questions">
-        <p class="loading">⏳ Đang tải câu hỏi...</p>
+    <div id="exam-container" style="max-width: 800px; margin: 20px auto; padding-bottom: 80px;">
+        </div>
+
+    <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); text-align: center;">
+        <button onclick="submitExam()" style="background: #28a745; color: white; padding: 12px 40px; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer;">NỘP BÀI</button>
     </div>
 
-    <!-- SUBMIT BUTTON -->
-    <button id="submitBtn">NỘP BÀI</button>
-
-    <!-- MODAL: LOADING (ĐANG CHẤM ĐIỂM) -->
-    <div class="modal-overlay" id="loadingModal">
+    <div id="result-modal-overlay">
         <div class="modal-content">
-            <div class="modal-icon">⏳</div>
-            <div class="modal-title">ĐANG CHẤM BÀI...</div>
-            <div class="spinner"></div>
-            <p class="modal-text">Vui lòng đợi trong giây lát</p>
+            <div id="modal-body">
+                </div>
         </div>
     </div>
 
-    <!-- MODAL: RESULT (KẾT QUẢ) -->
-    <div class="modal-overlay" id="resultModal">
-        <div class="modal-content">
-            <div class="modal-icon">🎉</div>
-            <div class="modal-title">KẾT QUẢ BÀI THI</div>
-            <div class="score-display" id="scoreDisplay">0/10</div>
-            <div class="result-details">
-                <p>✅ <strong>Số câu đúng:</strong> <span id="correctCount">0</span>/<span id="totalCount">0</span></p>
-            </div>
-            <button class="modal-btn" onclick="location.reload()">LÀM LẠI</button>
-            <button class="modal-btn" onclick="window.location.href='index.html'">VỀ TRANG CHỦ</button>
-        </div>
-    </div>
-
-    <!-- Load JavaScript -->
+    <script src="config.json"></script> 
+    <script src="assets/js/api-connector.js"></script>
     <script src="assets/js/exam-engine.js"></script>
 
 </body>
