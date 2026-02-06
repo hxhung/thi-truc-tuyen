@@ -1,95 +1,101 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <title>Đăng Nhập Thi Trực Tuyến</title>
+    <title>Vào Phòng Thi</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="assets/js/api-connector.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f2f5; margin: 0; }
-        .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 350px; text-align: center; }
-        h2 { color: #333; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f6f9; margin: 0; }
+        #login-box { background: white; padding: 40px 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 320px; }
+        h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
+        
+        /* Input Styles */
         .input-group { margin-bottom: 15px; text-align: left; }
-        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; color: #555; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; transition: 0.3s; }
-        input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
-        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; }
+        label { font-weight: 600; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 15px; transition: 0.3s; }
+        input:focus { border-color: #007bff; outline: none; }
+        
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
         button:hover { background-color: #0056b3; }
-        button:disabled { background-color: #ccc; }
+        
         #msg { margin-top: 15px; color: #dc3545; font-size: 14px; min-height: 20px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
-    <div class="login-card">
+    <div id="login-box">
         <h2>VÀO PHÒNG THI</h2>
         
         <div class="input-group">
-            <label>Mã Đề Thi (*)</label>
-            <input type="text" id="examId" placeholder="VD: TOAN10">
+            <label>Mã Đề Thi</label>
+            <input type="text" id="exam-code" placeholder="Ví dụ: TOAN10">
         </div>
 
         <div class="input-group">
-            <label>Họ và Tên (*)</label>
-            <input type="text" id="studentName" placeholder="Nhập họ tên...">
+            <label>Họ và Tên</label>
+            <input type="text" id="student-name" placeholder="Nhập họ tên...">
         </div>
 
         <div class="input-group">
-            <label>Lớp (*)</label>
-            <input type="text" id="studentClass" placeholder="VD: 10A1">
+            <label>Lớp</label>
+            <input type="text" id="student-class" placeholder="Ví dụ: 10A1">
         </div>
 
-        <div class="input-group hidden" id="late-section">
-            <label style="color:red">Mã Giám Thị (Do vào muộn)</label>
-            <input type="text" id="lateCode" placeholder="Nhập mã mở khóa...">
+        <div id="late-section" class="hidden input-group">
+            <label style="color:red">Mã Vào Muộn (Nếu có)</label>
+            <input type="text" id="late-code" placeholder="Nhập mã giám thị cấp...">
         </div>
 
-        <button id="btn-login" onclick="handleLogin()">VÀO THI</button>
+        <button onclick="checkExam()" id="btn-login">VÀO THI</button>
         <div id="msg"></div>
     </div>
 
+    <script src="assets/js/api-connector.js"></script>
     <script>
-        async function handleLogin() {
-            const eid = document.getElementById('examId').value.trim();
-            const name = document.getElementById('studentName').value.trim();
-            const sClass = document.getElementById('studentClass').value.trim();
-            const late = document.getElementById('lateCode').value.trim();
-            const msg = document.getElementById('msg');
+        async function checkExam() {
+            const eid = document.getElementById('exam-code').value.trim().toUpperCase();
+            const name = document.getElementById('student-name').value.trim();
+            const sClass = document.getElementById('student-class').value.trim(); // Lấy Lớp
+            const late = document.getElementById('late-code').value.trim();
             const btn = document.getElementById('btn-login');
+            const msg = document.getElementById('msg');
 
+            // Validate dữ liệu
             if (!eid || !name || !sClass) {
                 msg.innerText = "Vui lòng nhập đầy đủ Mã đề, Họ tên và Lớp!";
                 return;
             }
 
-            msg.innerText = "Đang kiểm tra dữ liệu...";
+            msg.innerText = "Đang kiểm tra...";
             btn.disabled = true;
 
             try {
-                // Gọi API checkAccess
-                const res = await checkExamAccess(eid, late);
-                
+                // Gọi API kiểm tra (Logic cũ giữ nguyên)
+                const res = await checkExamAccess(eid, late); 
+
                 if (res.success) {
-                    // Lưu thông tin vào Session để trang Exam sử dụng
-                    const sessionData = {
-                        examId: eid,
-                        title: res.title, // Lưu tiêu đề lấy từ API
-                        duration: res.duration,
-                        studentName: name,
-                        studentClass: sClass
+                    const minutes = res.duration || 60;
+                    
+                    // --- LƯU DỮ LIỆU QUAN TRỌNG VÀO SESSION ---
+                    const examData = {
+                        examId: res.examId || eid,
+                        title: res.title,
+                        duration: minutes,
+                        studentName: name,   // Lưu Tên
+                        studentClass: sClass // Lưu Lớp (QUAN TRỌNG)
                     };
-                    sessionStorage.setItem('currentExam', JSON.stringify(sessionData));
+                    sessionStorage.setItem('currentExam', JSON.stringify(examData));
                     
                     window.location.href = 'exam.html';
                 } else {
-                    msg.innerText = res.message;
+                    msg.innerText = res.message || "Mã đề không đúng.";
                     if (res.status === "REQUIRE_CODE") {
-                        document.getElementById('late-section').classList.remove('hidden');
+                        document.getElementById('late-section').style.display = 'block';
                     }
                 }
             } catch (err) {
                 console.error(err);
-                msg.innerText = "Lỗi kết nối server!";
+                msg.innerText = "Lỗi kết nối!";
             } finally {
                 btn.disabled = false;
             }
