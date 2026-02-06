@@ -157,8 +157,10 @@ window.selectAnswer = (id, val) => { studentAnswers[id] = val; };
 function renderMath() { if(window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{left:"$$", right:"$$", display:true}, {left:"$", right:"$", display:false}] }); }
 
 // --- LOGIC NỘP BÀI (MODAL) ---
+// --- Tìm đoạn window.submitExam cũ và thay bằng đoạn này ---
+
 window.submitExam = async function(force = false) {
-    // ... (các đoạn code kiểm tra confirm giữ nguyên) ...
+    if (!force && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
 
     const overlay = document.getElementById('result-modal-overlay');
     const body = document.getElementById('modal-body');
@@ -166,22 +168,23 @@ window.submitExam = async function(force = false) {
     body.innerHTML = `<h3>Đang chấm điểm...</h3><div class="spinner"></div>`;
 
     try {
-        // --- SỬA ĐOẠN NÀY ---
-        // Thay vì gộp tên, ta gửi 2 trường riêng biệt
+        // --- CẬP NHẬT GỬI LỚP Ở ĐÂY ---
         const payload = {
             examId: sessionData.examId,
-            studentName: sessionData.studentName,   // Gửi Tên
-            studentClass: sessionData.studentClass, // Gửi Lớp riêng
+            studentName: sessionData.studentName || 'Học sinh',
+            
+            // Thêm dòng này để gửi Lớp
+            studentClass: sessionData.studentClass || '', 
+            
             answers: studentAnswers
         };
-        // --------------------
+        // -----------------------------
 
         const res = await fetch(examConfig.api_endpoint, {
             method: 'POST',
             body: JSON.stringify(payload)
         }).then(r => r.json());
 
-        // ... (Phần xử lý hiển thị kết quả giữ nguyên) ...
         if (res.success) {
              body.innerHTML = `
                 <h2 style="color:#333; margin:0">KẾT QUẢ</h2>
