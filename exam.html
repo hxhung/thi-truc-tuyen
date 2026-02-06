@@ -11,95 +11,9 @@
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
-        /* Style cho từng Phần */
-.exam-section {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.section-header {
-    background: #e9ecef;
-    padding: 15px;
-    margin: -20px -20px 20px -20px;
-    border-radius: 8px 8px 0 0;
-    border-bottom: 2px solid #007bff;
-    font-weight: bold;
-    color: #333;
-    line-height: 1.5;
-}
-
-/* Đúng/Sai nằm trên 1 hàng (như yêu cầu trước) */
-.tf-options {
-    display: flex;
-    gap: 30px;
-    margin: 10px 0 10px 25px;
-}
-
-.tf-options label {
-    display: inline-flex !important;
-    align-items: center;
-    width: auto !important;
-    cursor: pointer;
-}
-/* Thụt lề cho các ý a, b, c, d trong phần Đúng/Sai */
-.exam-section:nth-child(2) .question-item {
-    padding-left: 30px;
-    border-bottom: none; /* Ẩn gạch chân giữa các ý nhỏ */
-    margin-bottom: 5px;
-}
-
-.exam-section:nth-child(2) .root-title {
-    margin-bottom: 15px;
-}
-/* Câu dẫn (Root) */
-.root-title {
-    background: #f1f8ff;
-    padding: 15px;
-    font-weight: bold;
-    margin-top: 25px;
-    margin-bottom: 10px;
-    border-left: 5px solid #007bff;
-    border-radius: 4px;
-    font-size: 18px;
-}
-
-/* Câu hỏi chính */
-.question-item {
-    padding: 15px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-}
-
-.question-item:last-child {
-    border-bottom: none;
-}
-
-/* Câu con TRUE_FALSE (a, b, c, d) */
-.sub-question {
-    margin-left: 30px;
-    padding: 10px 15px;
-    border-left: 2px dashed #ccc;
-    background: #f9f9f9;
-}
-
-.sub-question strong {
-    color: #007bff;
-    margin-right: 8px;
-}
-
-/* Đáp án */
-.question-item label {
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.question-item label:hover {
-    background: #f0f8ff;
-}
+        /* === BASE STYLES === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px; 
@@ -108,7 +22,7 @@
             background: #f5f5f5; 
         }
         
-        /* Header */
+        /* === HEADER === */
         #header {
             background: white;
             padding: 20px;
@@ -126,7 +40,6 @@
             color: #333;
         }
         
-        /* Đồng hồ đếm ngược */
         #timer { 
             background: #ff4444; 
             color: white; 
@@ -139,7 +52,7 @@
             text-align: center;
         }
 
-        /* Container câu hỏi */
+        /* === QUESTIONS CONTAINER === */
         #questions {
             background: white;
             padding: 30px;
@@ -148,29 +61,48 @@
             min-height: 300px;
         }
 
-        /* Loading state */
-        .loading {
+        .loading, .error {
             text-align: center;
-            color: #666;
             font-size: 18px;
             padding: 50px 0;
         }
-
+        
+        .loading { color: #666; }
+        
         .error {
-            text-align: center;
             color: #ff4444;
-            font-size: 18px;
-            padding: 50px 0;
             background: #fff3f3;
             border: 2px solid #ffcccc;
             border-radius: 8px;
         }
 
-        /* Câu hỏi */
-        .question-item {
+        /* === EXAM SECTIONS === */
+        .exam-section {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
             padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            background: #e9ecef;
+            padding: 15px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 2px solid #007bff;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.5;
+            font-size: 18px;
+        }
+
+        /* === QUESTIONS === */
+        .question-item {
+            padding: 15px;
             margin-bottom: 15px;
-            border-bottom: 2px solid #eee;
+            border-bottom: 1px solid #eee;
         }
 
         .question-item:last-child {
@@ -187,7 +119,27 @@
             line-height: 1.6;
         }
 
-        /* Đáp án */
+        /* === ROOT TITLE (Câu dẫn Phần II) === */
+        .root-title {
+            background: #f8f9fa;
+            padding: 15px;
+            font-weight: normal;  /* ← SỬA: Bỏ in đậm */
+            color: #000;          /* ← SỬA: Màu đen */
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 5px solid #007bff;
+            border-radius: 4px;
+            font-size: 17px;
+        }
+
+        /* === SUB QUESTIONS (a, b, c, d trong Đúng/Sai) === */
+        .exam-section:nth-child(2) .question-item {
+            padding-left: 30px;
+            border-bottom: none;
+            margin-bottom: 5px;
+        }
+
+        /* === OPTIONS === */
         .question-item label {
             display: block;
             margin: 10px 0;
@@ -215,18 +167,21 @@
             font-size: 16px;
         }
 
-        /* Câu dẫn (Root) */
-        .root-title {
-            background: #f1f8ff;
-            padding: 15px;
-            font-weight: bold;
-            margin-top: 20px;
-            border-left: 5px solid #007bff;
-            border-radius: 4px;
-            font-size: 18px;
+        /* === TRUE/FALSE OPTIONS (Đúng/Sai nằm ngang) === */
+        .tf-options {
+            display: flex;
+            gap: 30px;
+            margin: 10px 0 10px 25px;
         }
 
-        /* Nút nộp bài */
+        .tf-options label {
+            display: inline-flex !important;
+            align-items: center;
+            width: auto !important;
+            cursor: pointer;
+        }
+
+        /* === SUBMIT BUTTON === */
         #submitBtn {
             display: block;
             width: 100%;
@@ -253,7 +208,129 @@
             transform: translateY(0);
         }
 
-        /* Responsive */
+        /* === MODAL STYLES === */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            animation: slideIn 0.4s ease;
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-40px) scale(0.9);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        /* Spinner Loading */
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #007bff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal-text {
+            font-size: 16px;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        /* Result Modal */
+        .score-display {
+            font-size: 64px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin: 20px 0;
+        }
+
+        .result-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .result-details p {
+            margin: 10px 0;
+            font-size: 18px;
+            color: #555;
+        }
+
+        .modal-btn {
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* === RESPONSIVE === */
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -271,48 +348,56 @@
             #exam-title {
                 font-size: 20px;
             }
+            
+            .modal-content {
+                padding: 30px 20px;
+            }
+            
+            .score-display {
+                font-size: 48px;
+            }
         }
-        /* Container chứa 2 lựa chọn Đúng/Sai */
-.question-item div[style*="margin-left:20px"] {
-    display: flex !important;
-    flex-direction: row;
-    gap: 40px; /* Khoảng cách giữa Đúng và Sai */
-    align-items: center;
-    margin-top: 10px !important;
-}
-
-/* Tinh chỉnh label để không chiếm hết dòng */
-.question-item[data-type="TRUE_FALSE"] label, 
-.question-item div[style*="margin-left:20px"] label {
-    display: inline-flex !important;
-    align-items: center;
-    width: auto !important;
-    margin: 0 !important;
-    cursor: pointer;
-}
-
-/* Đảm bảo radio button và chữ thẳng hàng */
-.question-item input[type="radio"] {
-    margin-bottom: 0;
-    margin-right: 8px;
-}
     </style>
 </head>
 <body>
 
-    <!-- Header với tên đề thi và timer -->
+    <!-- HEADER -->
     <div id="header">
         <div id="exam-title">Đang tải đề thi...</div>
         <div id="timer">00:00</div>
     </div>
 
-    <!-- Container câu hỏi -->
+    <!-- QUESTIONS CONTAINER -->
     <div id="questions">
         <p class="loading">⏳ Đang tải câu hỏi...</p>
     </div>
 
-    <!-- Nút nộp bài -->
+    <!-- SUBMIT BUTTON -->
     <button id="submitBtn">NỘP BÀI</button>
+
+    <!-- MODAL: LOADING (ĐANG CHẤM ĐIỂM) -->
+    <div class="modal-overlay" id="loadingModal">
+        <div class="modal-content">
+            <div class="modal-icon">⏳</div>
+            <div class="modal-title">ĐANG CHẤM BÀI...</div>
+            <div class="spinner"></div>
+            <p class="modal-text">Vui lòng đợi trong giây lát</p>
+        </div>
+    </div>
+
+    <!-- MODAL: RESULT (KẾT QUẢ) -->
+    <div class="modal-overlay" id="resultModal">
+        <div class="modal-content">
+            <div class="modal-icon">🎉</div>
+            <div class="modal-title">KẾT QUẢ BÀI THI</div>
+            <div class="score-display" id="scoreDisplay">0/10</div>
+            <div class="result-details">
+                <p>✅ <strong>Số câu đúng:</strong> <span id="correctCount">0</span>/<span id="totalCount">0</span></p>
+            </div>
+            <button class="modal-btn" onclick="location.reload()">LÀM LẠI</button>
+            <button class="modal-btn" onclick="window.location.href='index.html'">VỀ TRANG CHỦ</button>
+        </div>
+    </div>
 
     <!-- Load JavaScript -->
     <script src="assets/js/exam-engine.js"></script>
