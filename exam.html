@@ -45,7 +45,16 @@
     width: auto !important;
     cursor: pointer;
 }
+/* Thụt lề cho các ý a, b, c, d trong phần Đúng/Sai */
+.exam-section:nth-child(2) .question-item {
+    padding-left: 30px;
+    border-bottom: none; /* Ẩn gạch chân giữa các ý nhỏ */
+    margin-bottom: 5px;
+}
 
+.exam-section:nth-child(2) .root-title {
+    margin-bottom: 15px;
+}
 /* Câu dẫn (Root) */
 .root-title {
     background: #f1f8ff;
