@@ -87,22 +87,46 @@ function renderQuestions(questions, examId) {
     const part3 = questions.filter(q => q.type === "FILL_IN");
 
     // 2. Hàm hỗ trợ tạo HTML cho từng câu (giữ nguyên logic gốc của bạn)
-    const generateQuestionHtml = (q, index, isPart2 = false) => {
-        let qHtml = `<div class="question-item" data-type="${q.type}">`;
-        
-        // Hiển thị nội dung câu hỏi
-        let label = isPart2 ? `<strong>${q.contentSub.split(')')[0]})</strong>` : `<strong>Câu ${index}:</strong>`;
-        let content = q.contentSub || q.content || "(Đề trống)";
-        qHtml += `<p>${label} ${content.replace(/^[a-z]\)\s*/, '')}</p>`;
+function renderQuestions(questions, examId) {
+    const container = document.getElementById('questions');
+    container.innerHTML = ''; 
 
-        // Hình ảnh
-        if (q.image) {
-            qHtml += `<div style="margin:10px 0;"><img src="assets/images/exams/${examId}/${q.image}" style="max-width:100%;" onerror="this.style.display='none'"></div>`;
+    // 1. Phân loại câu hỏi theo từng phần
+    const part1 = questions.filter(q => q.type === "MULTIPLE_CHOICE");
+    const part2 = questions.filter(q => q.type === "TRUE_FALSE");
+    const part3 = questions.filter(q => q.type === "FILL_IN");
+
+    // 2. Hàm tạo HTML cho từng câu hỏi
+    const generateQuestionHtml = (q, index, isPart2 = false) => {
+        let qHtml = `<div class="question-item" data-id="${q.id}">`;
+        
+        let label = "";
+        let content = q.contentSub || q.content || "(Đề trống)";
+
+        if (isPart2) {
+            // Xử lý hiển thị a), b), c), d) cho Phần II
+            const subIndexMatch = content.match(/^([a-z]\))/i);
+            if (subIndexMatch) {
+                label = `<strong>${subIndexMatch[1]}</strong>`;
+                content = content.replace(/^[a-z]\)\s*/i, ''); 
+            } else {
+                // Nếu data không có a) b), tự động dùng ký tự dựa trên vị trí (tùy chọn)
+                label = `<strong>- </strong>`;
+            }
+        } else {
+            label = `<strong>Câu ${index}:</strong>`;
         }
 
-        // Đáp án dựa theo loại
+        qHtml += `<p>${label} ${content}</p>`;
+
+        // Hiển thị ảnh nếu có
+        if (q.image) {
+            qHtml += `<div style="margin:10px 0;"><img src="assets/images/exams/${examId}/${q.image}" style="max-width:100%; border-radius:4px;" onerror="this.style.display='none'"></div>`;
+        }
+
+        // --- RENDER ĐÁP ÁN ---
         if (q.type === "MULTIPLE_CHOICE") {
-            qHtml += `<div style="margin-top:10px;">`;
+            qHtml += `<div class="options-group">`;
             ['A', 'B', 'C', 'D'].forEach(key => {
                 if (q.options[key]) {
                     qHtml += `<label style="display:block; margin:8px 0;"><input type="radio" name="q${q.id}" value="${key}" onchange="studentAnswers[${q.id}]='${key}'"> <strong>${key}.</strong> ${q.options[key]}</label>`;
@@ -111,9 +135,10 @@ function renderQuestions(questions, examId) {
             qHtml += `</div>`;
         } 
         else if (q.type === "TRUE_FALSE") {
-            qHtml += `<div class="tf-options">
-                <label><input type="radio" name="q${q.id}" value="Đúng" onchange="studentAnswers[${q.id}]='Đúng'"> Đúng</label>
-                <label><input type="radio" name="q${q.id}" value="Sai" onchange="studentAnswers[${q.id}]='Sai'"> Sai</label>
+            // Đúng/Sai nằm trên 1 hàng
+            qHtml += `<div style="display: flex; gap: 40px; margin-left: 25px; margin-top: 5px;">
+                <label style="cursor:pointer; display: flex; align-items: center; width: auto;"><input type="radio" name="q${q.id}" value="Đúng" onchange="studentAnswers[${q.id}]='Đúng'" style="margin-right:8px;"> Đúng</label>
+                <label style="cursor:pointer; display: flex; align-items: center; width: auto;"><input type="radio" name="q${q.id}" value="Sai" onchange="studentAnswers[${q.id}]='Sai'" style="margin-right:8px;"> Sai</label>
             </div>`;
         } 
         else if (q.type === "FILL_IN") {
@@ -126,24 +151,21 @@ function renderQuestions(questions, examId) {
 
     // 3. Render PHẦN I
     if (part1.length > 0) {
-        let html = `<div class="exam-section">
-            <div class="section-header">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Mỗi câu hỏi thí sinh chỉ chọn một phương án.</div>`;
+        let html = `<div class="exam-section"><div class="section-header">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn. Mỗi câu hỏi thí sinh chỉ chọn một phương án.</div>`;
         part1.forEach((q, idx) => html += generateQuestionHtml(q, idx + 1));
         html += `</div>`;
         container.innerHTML += html;
     }
 
-    // 4. Render PHẦN II (Đúng/Sai)
+    // 4. Render PHẦN II (Đúng/Sai theo nhóm Root)
     if (part2.length > 0) {
-        let html = `<div class="exam-section">
-            <div class="section-header">PHẦN II. Câu trắc nghiệm đúng sai. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.</div>`;
-        
+        let html = `<div class="exam-section"><div class="section-header">PHẦN II. Câu trắc nghiệm đúng sai. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.</div>`;
         let lastRoot = "";
         let rootCount = 0;
         part2.forEach((q) => {
-            if (q.contentRoot !== lastRoot) {
+            if (q.contentRoot && q.contentRoot !== lastRoot) {
                 rootCount++;
-                html += `<div class="root-title" style="margin-bottom:10px;"><strong>Câu ${rootCount}:</strong> ${q.contentRoot}</div>`;
+                html += `<div class="root-title" style="margin-top:20px; font-weight:bold; color:#007bff;">Câu ${rootCount}. ${q.contentRoot}</div>`;
                 lastRoot = q.contentRoot;
             }
             html += generateQuestionHtml(q, null, true);
@@ -154,14 +176,13 @@ function renderQuestions(questions, examId) {
 
     // 5. Render PHẦN III
     if (part3.length > 0) {
-        let html = `<div class="exam-section">
-            <div class="section-header">PHẦN III. Câu trắc nghiệm trả lời ngắn. Thí sinh trả lời kết quả của câu hỏi.</div>`;
+        let html = `<div class="exam-section"><div class="section-header">PHẦN III. Câu trắc nghiệm trả lời ngắn. Thí sinh trả lời kết quả của câu hỏi.</div>`;
         part3.forEach((q, idx) => html += generateQuestionHtml(q, idx + 1));
         html += `</div>`;
         container.innerHTML += html;
     }
 
-    // Render LaTeX
+    // Render LaTeX (giữ nguyên)
     if (window.renderMathInElement) { renderMathInElement(document.body, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); }
 }
 function startTimer(min) {
