@@ -73,21 +73,41 @@
                 // Gọi API kiểm tra (Logic cũ giữ nguyên)
                 const res = await checkExamAccess(eid, late); 
 
-                if (res.success) {
-                    const minutes = res.duration || 60;
-                    
-                    // --- LƯU DỮ LIỆU QUAN TRỌNG VÀO SESSION ---
-                    const examData = {
-                        examId: res.examId || eid,
-                        title: res.title,
-                        duration: minutes,
-                        studentName: name,   // Lưu Tên
-                        studentClass: sClass // Lưu Lớp (QUAN TRỌNG)
-                    };
-                    sessionStorage.setItem('currentExam', JSON.stringify(examData));
-                    
-                    window.location.href = 'exam.html';
-                } else {
+                // --- Trong file index.html, tìm đoạn xử lý res.success ---
+
+if (res.success) {
+    const minutes = res.duration || 60;
+    
+    // BƯỚC 1: Hiện thông báo đang tải đề (Thay vì alert ngay)
+    msg.innerText = "Đang tải dữ liệu đề thi...";
+    msg.style.color = "blue";
+    
+    // BƯỚC 2: Gọi lệnh lấy câu hỏi NGAY LẬP TỨC
+    try {
+        const qResponse = await fetch(`${API_URL}?action=getQuestions&examId=${eid}`);
+        const qData = await qResponse.json();
+        
+        if (qData.success) {
+            // BƯỚC 3: Lưu cả thông tin thi VÀ bộ câu hỏi vào Session
+            const examData = {
+                examId: res.examId || eid,
+                title: res.title,
+                duration: minutes,
+                studentName: name,
+                studentClass: sClass,
+                questions: qData.data // <--- LƯU CÂU HỎI LUÔN
+            };
+            sessionStorage.setItem('currentExam', JSON.stringify(examData));
+            
+            // Vào thi luôn (Học sinh sẽ thấy hiện ra ngay lập tức)
+            window.location.href = 'exam.html';
+        } else {
+            msg.innerText = "Lỗi: Không tải được câu hỏi.";
+        }
+    } catch (e) {
+        msg.innerText = "Mất kết nối khi tải đề.";
+    }
+} else {
                     msg.innerText = res.message || "Mã đề không đúng.";
                     if (res.status === "REQUIRE_CODE") {
                         document.getElementById('late-section').style.display = 'block';
