@@ -1,275 +1,346 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN FINAL
+ * EXAM ENGINE - FINAL VERSION (v2.0)
  * Tính năng:
- * 1. Tự động chia 3 phần (I, II, III).
- * 2. Giao diện Đúng/Sai nằm ngang, thẳng hàng.
- * 3. Tự động sinh nhãn a, b, c, d (ẩn nhãn cũ trong data).
- * 4. TRỘN CÂU HỎI THÔNG MINH (Giữ cấu trúc nhóm cho Phần II).
+ * 1. Tự động chia 3 phần (Trắc nghiệm, Đúng/Sai, Điền khuyết).
+ * 2. Xáo trộn thông minh: Giữ cấu trúc nhóm cho Phần II.
+ * 3. Hỗ trợ hiển thị ảnh và công thức Toán (KaTeX).
+ * 4. Giao diện nộp bài dạng Modal, hiệu ứng Loading và Kết quả Gradient.
  */
 
 let currentQuestions = [];
 let studentAnswers = {};
 let examConfig = null;
+let sessionData = null;
 
 // --- 1. KHỞI TẠO & LOAD DỮ LIỆU ---
 
-document.addEventListener('DOMContentLoaded', loadExamData);
+document.addEventListener('DOMContentLoaded', () => {
+    loadConfig().then(() => {
+        loadExamData();
+    });
+});
 
 // Load cấu hình từ config.json
 async function loadConfig() {
     try {
         const response = await fetch('config.json');
         examConfig = await response.json();
-        return examConfig.api_endpoint;
     } catch (error) {
-        console.error('Không thể load config:', error);
-        return null;
+        console.error('Lỗi load config:', error);
+        alert('Không thể tải tệp cấu hình.');
     }
 }
 
+// Hàm chính để tải dữ liệu đề thi
 async function loadExamData() {
-    const sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
+    // 1. Lấy thông tin từ Session (được lưu từ trang index.html)
+    sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
+    
     if (!sessionData) { 
-        alert('Không tìm thấy thông tin kỳ thi. Vui lòng đăng nhập lại.');
+        alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
         window.location.href = 'index.html'; 
         return; 
     }
 
-    const API_URL = await loadConfig();
-    if (!API_URL) return;
-
-    const examId = sessionData.examId;
+    // 2. Hiển thị Tiêu đề (Ưu tiên Title từ Config, nếu không có thì dùng ID)
     const titleElement = document.getElementById('exam-title');
-    if (titleElement) titleElement.innerText = `Đề thi: ${examId}`;
+    if (titleElement) {
+        titleElement.innerText = sessionData.title || `Mã đề: ${sessionData.examId}`;
+    }
+
+    // 3. Gọi API lấy câu hỏi
+    if (!examConfig || !examConfig.api_endpoint) return;
 
     try {
-        const apiUrl = `${API_URL}?action=getQuestions&examId=${examId}`;
-        const response = await fetch(apiUrl);
-        const res = await response.json();
-
+        const res = await getQuestionsFromAPI(sessionData.examId);
+        
         if (res.success) {
-            currentQuestions = res.data;
-            // Kích hoạt trộn và render
-            renderQuestions(currentQuestions, examId);
-            startTimer(sessionData.remainingMinutes || 60);
+            currentQuestions = res.data; // Dữ liệu thô từ Server
+            
+            // Xử lý và Xáo trộn câu hỏi
+            const processedData = processAndShuffle(currentQuestions);
+            
+            // Render ra màn hình
+            renderExam(processedData);
+            
+            // Render công thức Toán (KaTeX)
+            renderMath();
+
+            // Bắt đầu đếm ngược
+            startTimer(sessionData.duration);
         } else {
-            document.getElementById('questions').innerHTML = `<p class="error">Lỗi: ${res.message}</p>`;
+            alert(res.message || "Không thể tải đề thi.");
         }
-    } catch (error) {
-        console.error(error);
-        document.getElementById('questions').innerHTML = `<p class="error">Lỗi kết nối máy chủ.</p>`;
+    } catch (e) {
+        console.error(e);
+        alert("Lỗi kết nối đến máy chủ.");
     }
 }
 
-// --- 2. LOGIC TRỘN & RENDER ---
+// Wrapper gọi API
+async function getQuestionsFromAPI(examId) {
+    const url = `${examConfig.api_endpoint}?action=getQuestions&examId=${examId}`;
+    const response = await fetch(url);
+    return await response.json();
+}
 
-// Hàm xáo trộn mảng (Fisher-Yates Shuffle)
+// --- 2. XỬ LÝ DỮ LIỆU & XÁO TRỘN (LOGIC CỐT LÕI) ---
+
+function processAndShuffle(questions) {
+    // Phân loại câu hỏi
+    let part1 = questions.filter(q => q.type === 'MULTIPLE_CHOICE');
+    let part2 = questions.filter(q => q.type === 'TRUE_FALSE');
+    let part3 = questions.filter(q => q.type === 'FILL_IN');
+
+    // Xáo trộn Phần I và III (Ngẫu nhiên hoàn toàn)
+    shuffleArray(part1);
+    shuffleArray(part3);
+
+    // Xử lý Phần II (Đúng/Sai): Gom nhóm theo ContentRoot để không bị xé lẻ
+    let groupedPart2 = groupQuestions(part2);
+    shuffleArray(groupedPart2); // Trộn thứ tự các nhóm
+    
+    // (Tuỳ chọn: Nếu muốn trộn cả thứ tự các ý a,b,c,d trong nhóm thì bỏ comment dòng dưới)
+    // groupedPart2.forEach(group => shuffleArray(group.items));
+
+    return { part1, part2: groupedPart2, part3 };
+}
+
+// Hàm gom nhóm cho Phần II
+function groupQuestions(questions) {
+    const groups = {};
+    questions.forEach(q => {
+        const key = q.contentRoot || "Common"; // Gom theo câu dẫn chung
+        if (!groups[key]) groups[key] = { root: q.contentRoot, items: [] };
+        groups[key].items.push(q);
+    });
+    return Object.values(groups);
+}
+
+// Thuật toán Fisher-Yates Shuffle
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
-    return array;
 }
 
-function renderQuestions(questions, examId) {
-    const container = document.getElementById('questions');
-    container.innerHTML = ''; 
+// --- 3. RENDER GIAO DIỆN (HTML) ---
 
-    // 1. Phân loại câu hỏi
-    // Lưu ý: Dùng let để có thể gán lại sau khi trộn
-    let part1 = questions.filter(q => q.type === "MULTIPLE_CHOICE");
-    let part2 = questions.filter(q => q.type === "TRUE_FALSE");
-    let part3 = questions.filter(q => q.type === "FILL_IN");
+function renderExam(data) {
+    const container = document.getElementById('exam-container');
+    container.innerHTML = '';
+    let globalIndex = 1;
 
-    // 2. THỰC HIỆN TRỘN CÂU HỎI
-    
-    // Phần I và III: Trộn ngẫu nhiên hoàn toàn
-    shuffleArray(part1);
-    shuffleArray(part3);
-
-    // Phần II: Trộn thông minh (Giữ nhóm Root)
-    if (part2.length > 0) {
-        // Bước 2.1: Gom nhóm các câu hỏi cùng ContentRoot
-        const groups = {};
-        part2.forEach(q => {
-            // Nếu không có root thì dùng key tạm
-            const rootKey = q.contentRoot ? q.contentRoot.trim() : "___NO_ROOT___";
-            if (!groups[rootKey]) groups[rootKey] = [];
-            groups[rootKey].push(q);
+    // --- PHẦN I: TRẮC NGHIỆM ---
+    if (data.part1.length > 0) {
+        container.innerHTML += `<div class="section-header">PHẦN I. TRẮC NGHIỆM (${data.part1.length} câu)</div>`;
+        const section1 = document.createElement('div');
+        section1.className = 'exam-section';
+        
+        data.part1.forEach(q => {
+            section1.innerHTML += createMultipleChoiceHTML(q, globalIndex++);
         });
-
-        // Bước 2.2: Chuyển object thành mảng các nhóm
-        const groupList = Object.values(groups);
-
-        // Bước 2.3: Trộn thứ tự các nhóm (Câu 1 có thể đảo vị trí cho Câu 2)
-        shuffleArray(groupList);
-
-        // Bước 2.4: Trộn thứ tự ý a,b,c,d TRONG mỗi nhóm (Tùy chọn)
-        groupList.forEach(group => shuffleArray(group));
-
-        // Bước 2.5: Làm phẳng lại thành danh sách để render
-        part2 = groupList.flat();
+        container.appendChild(section1);
     }
 
-    // 3. HÀM RENDER CHI TIẾT
-    const getCleanContent = (content) => {
-        if (!content) return "";
-        return content.replace(/^(?:đáp án|ý|câu)?\s*(?:\d+|[a-z])\s*[\.\)]\s*/yi, '').trim();
-    };
+    // --- PHẦN II: ĐÚNG/SAI ---
+    if (data.part2.length > 0) {
+        container.innerHTML += `<div class="section-header">PHẦN II. TRẮC NGHIỆM ĐÚNG SAI</div>`;
+        const section2 = document.createElement('div');
+        section2.className = 'exam-section';
 
-    const generateQuestionHtml = (q, indexGlobal, subLabel = null) => {
-        let qHtml = `<div class="question-item" data-id="${q.id}" style="border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px;">`;
-        
-        let labelDisplay = "";
-        let contentDisplay = q.contentSub || q.content || "";
-
-        if (subLabel) {
-            // Phần II: Hiển thị a, b, c, d
-            labelDisplay = `<strong style="color: #007bff; margin-right: 5px;">${subLabel})</strong>`;
-            let cleaned = getCleanContent(contentDisplay);
-            if (cleaned !== "") contentDisplay = cleaned; 
-        } else {
-            // Phần I, III: Hiển thị Câu 1, Câu 2...
-            labelDisplay = `<strong style="color: #007bff;">Câu ${indexGlobal}:</strong>`;
-        }
-
-        qHtml += `<div style="font-size: 16px; line-height: 1.5;">${labelDisplay} ${contentDisplay}</div>`;
-
-        if (q.image) {
-            qHtml += `<div style="margin:15px 0;"><img src="assets/images/exams/${examId}/${q.image}" style="max-width:100%; border-radius:4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onerror="this.style.display='none'"></div>`;
-        }
-
-        // Render Input
-        if (q.type === "MULTIPLE_CHOICE") {
-            qHtml += `<div class="options-group" style="margin-top: 10px;">`;
-            ['A', 'B', 'C', 'D'].forEach(key => {
-                if (q.options[key]) {
-                    qHtml += `<label style="display:flex; align-items:center; margin:8px 0; cursor:pointer;">
-                        <input type="radio" name="q${q.id}" value="${key}" onchange="studentAnswers[${q.id}]='${key}'" style="margin-right: 10px;"> 
-                        <span><strong>${key}.</strong> ${q.options[key]}</span>
-                    </label>`;
-                }
-            });
-            qHtml += `</div>`;
-        } 
-        else if (q.type === "TRUE_FALSE") {
-            qHtml += `<div style="display: flex !important; flex-direction: row !important; gap: 40px; margin-top: 10px; margin-left: 25px;">
-                <label style="cursor:pointer; display: flex; align-items: center; width: auto !important; margin: 0 !important;">
-                    <input type="radio" name="q${q.id}" value="Đúng" onchange="studentAnswers[${q.id}]='Đúng'" style="margin-right: 8px;"> 
-                    <span style="font-weight: 500;">Đúng</span>
-                </label>
-                <label style="cursor:pointer; display: flex; align-items: center; width: auto !important; margin: 0 !important;">
-                    <input type="radio" name="q${q.id}" value="Sai" onchange="studentAnswers[${q.id}]='Sai'" style="margin-right: 8px;"> 
-                    <span style="font-weight: 500;">Sai</span>
-                </label>
-            </div>`;
-        } 
-        else if (q.type === "FILL_IN") {
-            qHtml += `<div style="margin-top:15px;">
-                <input type="text" placeholder="Nhập kết quả..." style="width:100%; max-width: 300px; padding:10px; border:2px solid #e0e0e0; border-radius:4px;" oninput="studentAnswers[${q.id}]=this.value.trim()">
-            </div>`;
-        }
-
-        qHtml += `</div>`;
-        return qHtml;
-    };
-
-    // 4. RENDER GIAO DIỆN CÁC PHẦN
-
-    if (part1.length > 0) {
-        let html = `<div class="exam-section" style="background:#fff; margin-bottom:30px;"><div class="section-header" style="font-weight:bold; font-size:18px; color:#333; border-bottom:2px solid #007bff; padding-bottom:10px; margin-bottom:20px;">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn.</div>`;
-        part1.forEach((q, idx) => html += generateQuestionHtml(q, idx + 1, null));
-        html += `</div>`;
-        container.innerHTML += html;
-    }
-
-    if (part2.length > 0) {
-        let html = `<div class="exam-section" style="background:#fff; margin-bottom:30px;"><div class="section-header" style="font-weight:bold; font-size:18px; color:#333; border-bottom:2px solid #007bff; padding-bottom:10px; margin-bottom:20px;">PHẦN II. Câu trắc nghiệm đúng sai.</div>`;
-        
-        let lastRoot = "INITIAL_VAL"; 
-        let rootCount = 0;
-        let subLabelIndex = 0;
-        const subLabels = ['a', 'b', 'c', 'd', 'e', 'f'];
-
-        part2.forEach((q) => {
-            const currentRoot = q.contentRoot ? q.contentRoot.trim() : "";
-            // Logic phát hiện câu dẫn mới (do đã được group nên các câu cùng root luôn nằm cạnh nhau)
-            if (currentRoot !== lastRoot) {
-                rootCount++;
-                subLabelIndex = 0; 
-                if(currentRoot) {
-                     html += `<div class="root-title" style="margin-top:25px; margin-bottom:15px; font-weight:bold; font-size: 17px; color:#0056b3; background:#f8f9fa; padding:10px; border-left:4px solid #0056b3;">Câu ${rootCount}. ${currentRoot}</div>`;
-                }
-                lastRoot = currentRoot;
+        data.part2.forEach(group => {
+            // Render câu dẫn chung (Root)
+            if (group.root) {
+                section2.innerHTML += `<div class="root-title"><b>Câu ${globalIndex++}:</b> ${group.root}</div>`;
             }
-            const labelChar = subLabels[subLabelIndex] || '-';
-            html += generateQuestionHtml(q, null, labelChar);
-            subLabelIndex++;
+            // Render các ý con (a, b, c, d)
+            let subLabel = 97; // ascii 97 is 'a'
+            group.items.forEach(q => {
+                const labelChar = String.fromCharCode(subLabel++);
+                section2.innerHTML += createTrueFalseHTML(q, labelChar); // Không tăng globalIndex ở ý con
+            });
+            section2.innerHTML += `<hr style="margin: 20px 0; border:0; border-top:1px dashed #ccc;">`;
         });
-
-        html += `</div>`;
-        container.innerHTML += html;
+        container.appendChild(section2);
     }
 
-    if (part3.length > 0) {
-        let html = `<div class="exam-section" style="background:#fff; margin-bottom:30px;"><div class="section-header" style="font-weight:bold; font-size:18px; color:#333; border-bottom:2px solid #007bff; padding-bottom:10px; margin-bottom:20px;">PHẦN III. Câu trắc nghiệm trả lời ngắn.</div>`;
-        part3.forEach((q, idx) => html += generateQuestionHtml(q, idx + 1, null));
-        html += `</div>`;
-        container.innerHTML += html;
-    }
+    // --- PHẦN III: TRẢ LỜI NGẮN ---
+    if (data.part3.length > 0) {
+        container.innerHTML += `<div class="section-header">PHẦN III. TRẢ LỜI NGẮN</div>`;
+        const section3 = document.createElement('div');
+        section3.className = 'exam-section';
 
-    if (window.renderMathInElement) { 
-        renderMathInElement(document.body, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); 
+        data.part3.forEach(q => {
+            section3.innerHTML += createFillInHTML(q, globalIndex++);
+        });
+        container.appendChild(section3);
     }
 }
 
-// --- 3. SUBMIT & TIMER ---
+// HTML cho Trắc nghiệm (A, B, C, D)
+function createMultipleChoiceHTML(q, index) {
+    const imgHTML = q.image ? `<div class="q-image"><img src="assets/images/exams/${sessionData.examId}/${q.image}" alt="Hình ảnh"></div>` : '';
+    
+    return `
+    <div class="question-item" id="q-${q.id}">
+        <div class="q-content"><b>Câu ${index}:</b> ${q.contentSub || q.contentRoot}</div>
+        ${imgHTML}
+        <div class="options-grid">
+            ${['A', 'B', 'C', 'D'].map(opt => `
+                <label class="option-label">
+                    <input type="radio" name="q_${q.id}" value="${opt}" onclick="selectAnswer(${q.id}, '${opt}')">
+                    <span><b>${opt}.</b> ${q.options[opt] || ''}</span>
+                </label>
+            `).join('')}
+        </div>
+    </div>`;
+}
 
-function startTimer(min) {
-    let sec = min * 60;
+// HTML cho Đúng/Sai (Nằm ngang)
+function createTrueFalseHTML(q, label) {
+    return `
+    <div class="question-item tf-item" data-type="TRUE_FALSE" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="flex:1;"><b>${label})</b> ${q.contentSub}</div>
+        <div style="width:180px; display:flex; gap:20px;">
+            <label><input type="radio" name="q_${q.id}" value="T" onclick="selectAnswer(${q.id}, 'T')"> Đúng</label>
+            <label><input type="radio" name="q_${q.id}" value="F" onclick="selectAnswer(${q.id}, 'F')"> Sai</label>
+        </div>
+    </div>`;
+}
+
+// HTML cho Điền khuyết
+function createFillInHTML(q, index) {
+    const imgHTML = q.image ? `<div class="q-image"><img src="assets/images/exams/${sessionData.examId}/${q.image}"></div>` : '';
+    return `
+    <div class="question-item">
+        <div class="q-content"><b>Câu ${index}:</b> ${q.contentSub || q.contentRoot}</div>
+        ${imgHTML}
+        <div style="margin-top:10px;">
+            <input type="text" class="fill-input" placeholder="Nhập đáp án..." 
+                   onchange="selectAnswer(${q.id}, this.value)" 
+                   style="width:100%; max-width:300px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+        </div>
+    </div>`;
+}
+
+// --- 4. TƯƠNG TÁC & HỖ TRỢ ---
+
+// Lưu đáp án người dùng chọn
+window.selectAnswer = function(qId, value) {
+    studentAnswers[qId] = value;
+};
+
+// Render KaTeX (Toán học)
+function renderMath() {
+    renderMathInElement(document.body, {
+        delimiters: [
+            {left: "$$", right: "$$", display: true},
+            {left: "$", right: "$", display: false}
+        ],
+        throwOnError: false
+    });
+}
+
+// Đồng hồ đếm ngược
+function startTimer(minutes) {
+    let sec = minutes * 60;
     const timerElement = document.getElementById('timer');
-    if (!timerElement) return;
+    
     const countdown = setInterval(() => {
         if (sec <= 0) {
             clearInterval(countdown);
-            alert('Hết giờ!');
-            submitExam();
+            alert('Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.');
+            submitExam(true); // Force submit
             return;
         }
         sec--;
-        let m = Math.floor(sec/60), s = sec % 60;
-        if (sec < 300) timerElement.style.color = 'red';
+        let m = Math.floor(sec / 60);
+        let s = sec % 60;
+        
+        if (sec < 300) { // Dưới 5 phút đổi màu đỏ
+            timerElement.style.color = '#dc3545';
+            timerElement.style.borderColor = '#dc3545';
+        }
+        
         timerElement.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
     }, 1000);
 }
 
-async function submitExam() {
-    const sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
-    const total = currentQuestions.length;
-    const answered = Object.keys(studentAnswers).length;
+// --- 5. NỘP BÀI (LOGIC MỚI - MODAL) ---
 
-    if (answered < total) {
-        if (!confirm(`Bạn mới trả lời ${answered}/${total} câu. Nộp bài?`)) return;
+window.submitExam = async function(force = false) {
+    const totalQuestions = currentQuestions.length;
+    const answeredCount = Object.keys(studentAnswers).length;
+
+    // Nếu không phải bắt buộc nộp (hết giờ) thì hỏi xác nhận
+    if (!force) {
+        if (answeredCount < totalQuestions) {
+            const confirmMsg = `Bạn mới hoàn thành ${answeredCount}/${totalQuestions} câu hỏi.\nBạn có chắc chắn muốn nộp bài không?`;
+            if (!confirm(confirmMsg)) return;
+        } else {
+            if (!confirm('Bạn có chắc chắn muốn nộp bài?')) return;
+        }
     }
+
+    // 1. Hiển thị Overlay & Spinner
+    const overlay = document.getElementById('result-modal-overlay');
+    const modalBody = document.getElementById('modal-body');
+    
+    if (overlay) {
+        overlay.style.display = 'flex';
+        modalBody.innerHTML = `
+            <h3 style="color:#555">Đang chấm điểm...</h3>
+            <div class="spinner"></div>
+            <p style="color:#888; font-size:14px">Vui lòng giữ nguyên màn hình</p>
+        `;
+    }
+
+    // 2. Chuẩn bị dữ liệu gửi đi
+    // Kết hợp Họ tên và Lớp để gửi vào cột StudentName
+    const fullStudentInfo = `${sessionData.studentName} - ${sessionData.studentClass}`;
 
     try {
         const response = await fetch(examConfig.api_endpoint, {
             method: 'POST',
             body: JSON.stringify({
                 examId: sessionData.examId,
-                studentName: sessionData.studentName || 'Học sinh',
+                studentName: fullStudentInfo, 
                 answers: studentAnswers
             })
         });
-        const result = await response.json();
-        if (result.success) {
-            alert(`Điểm: ${result.score}/10`);
-            sessionStorage.setItem('examResult', JSON.stringify(result));
-        } else {
-            alert(result.message);
-        }
-    } catch (e) { alert('Lỗi nộp bài'); }
-}
 
-document.getElementById('submitBtn')?.addEventListener('click', submitExam);
+        const result = await response.json();
+
+        if (result.success) {
+            // 3. Hiển thị Kết quả (Giao diện đẹp)
+            modalBody.innerHTML = `
+                <h2 style="color: #333; margin-bottom: 5px;">KẾT QUẢ</h2>
+                <div class="score-gradient">${result.score}</div>
+                
+                <div class="result-detail">
+                    <p style="margin: 5px 0; font-size: 16px;">Số câu đúng: <b>${result.correctCount}</b> / ${result.totalQuestions}</p>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-retry" onclick="location.reload()">Làm lại</button>
+                    <button class="btn-home" onclick="location.href='index.html'">Về trang chủ</button>
+                </div>
+            `;
+            
+            // Xóa session để ngăn người dùng quay lại nộp tiếp
+            sessionStorage.removeItem('currentExam');
+            
+        } else {
+            throw new Error(result.message);
+        }
+
+    } catch (e) {
+        modalBody.innerHTML = `
+            <h3 style="color: #dc3545;">Có lỗi xảy ra!</h3>
+            <p>${e.message || "Không thể gửi bài thi."}</p>
+            <button class="btn-retry" onclick="document.getElementById('result-modal-overlay').style.display='none'">Đóng & Thử lại</button>
+        `;
+    }
+};
