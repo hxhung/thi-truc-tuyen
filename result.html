@@ -4,119 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết Quả Thi</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body {
-            background: #f0f2f5;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh; margin: 0;
-        }
-        .result-container {
-            background: white; width: 100%; max-width: 500px;
-            padding: 40px; border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-            animation: slideUp 0.5s ease;
-        }
-        /* Vòng tròn điểm số */
-        .score-circle {
-            width: 150px; height: 150px;
-            background: conic-gradient(#28a745 var(--percent), #e9ecef 0);
-            border-radius: 50%; margin: 20px auto;
-            display: flex; justify-content: center; align-items: center;
-            position: relative;
-        }
-        .score-circle::before {
-            content: ''; position: absolute;
-            width: 130px; height: 130px; background: white; border-radius: 50%;
-        }
-        .score-number {
-            position: relative; font-size: 3.5rem; font-weight: 800; color: #28a745;
-        }
-        
-        /* Chi tiết điểm */
-        .detail-box {
-            background: #f8f9fa; border-radius: 12px; padding: 20px;
-            margin: 30px 0; text-align: left;
-        }
-        .detail-row {
-            display: flex; justify-content: space-between;
-            padding: 10px 0; border-bottom: 1px dashed #dee2e6; font-size: 1.1rem;
-        }
-        .detail-row:last-child { border-bottom: none; }
-        
-        /* Nút bấm */
-        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
-        .btn-home { background: #6c757d; color: white; }
-        .btn-retry { background: #007bff; color: white; }
-        
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .result-card { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .score-circle { width: 140px; height: 140px; background: #28a745; border-radius: 50%; margin: 20px auto; display: flex; justify-content: center; align-items: center; color: white; font-size: 3.5rem; font-weight: bold; border: 5px solid #d4edda; }
+        .detail-box { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 30px 0; text-align: left; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
+        .btn { display: block; width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn:hover { background: #0056b3; }
     </style>
 </head>
 <body>
-
-    <div class="result-container">
-        <h2 style="color: #333; margin-bottom: 5px;">KẾT QUẢ BÀI THI</h2>
-        <div style="color: #666;" id="student-name">Thí sinh: ---</div>
-
-        <div class="score-circle" id="score-circle" style="--percent: 0%">
-            <div class="score-number" id="final-score">0.0</div>
-        </div>
-        <div style="color: #888; margin-top: -10px; margin-bottom: 20px;">Điểm tổng kết (Thang 10)</div>
-
+    <div class="result-card">
+        <h2 style="color:#333; margin:0">KẾT QUẢ BÀI THI</h2>
+        <p id="student-info" style="color:#666; margin-top:10px">...</p>
+        
+        <div class="score-circle" id="final-score">0.0</div>
+        
         <div class="detail-box">
-            <div class="detail-row">
-                <span>📝 Trắc nghiệm</span>
-                <strong id="p1-score">0</strong>
-            </div>
-            <div class="detail-row">
-                <span>⚖️ Đúng/Sai</span>
-                <strong id="p2-score">0</strong>
-            </div>
-            <div class="detail-row">
-                <span>✍️ Điền số</span>
-                <strong id="p3-score">0</strong>
-            </div>
+            <div class="detail-row"><span>📝 Trắc nghiệm:</span><strong id="p1">0</strong></div>
+            <div class="detail-row"><span>⚖️ Đúng/Sai:</span><strong id="p2">0</strong></div>
+            <div class="detail-row" style="border:none"><span>✍️ Điền số:</span><strong id="p3">0</strong></div>
         </div>
 
-        <div class="btn-group">
-            <button class="btn btn-home" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/index.html'">
-                <i class="fas fa-home"></i> Trang chủ
-            </button>
-            <button class="btn btn-retry" onclick="window.location.href='index.html'">
-                <i class="fas fa-redo"></i> Thi lại
-            </button>
-        </div>
+        <button class="btn" onclick="window.location.href='index.html'">VỀ TRANG CHỦ</button>
     </div>
 
     <script>
-        const rawData = sessionStorage.getItem('examResult');
-        if (!rawData) {
-            alert('Không tìm thấy kết quả! Quay về trang chủ.');
+        // Tự động chạy khi mở trang
+        const raw = sessionStorage.getItem('examResult');
+        if (!raw) {
+            alert('Không tìm thấy kết quả!');
             window.location.href = 'index.html';
         } else {
-            const data = JSON.parse(rawData);
+            const data = JSON.parse(raw);
             
-            // 1. SỬA LỖI HIỂN THỊ TÊN
-            // Ưu tiên lấy từ data trả về, nếu không có thì lấy 'Thí sinh'
-            document.getElementById('student-name').innerText = 
-                "Thí sinh: " + (data.studentName || "Thí sinh");
+            // 1. HIỂN THỊ TÊN (Ưu tiên lấy từ data Backend trả về, nếu không thì lấy từ localStorage)
+            const name = data.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
+            const sClass = data.studentClass || localStorage.getItem('lastStudentClass') || "";
+            document.getElementById('student-info').innerText = `${name} - ${sClass}`;
 
-            // 2. HIỂN THỊ ĐIỂM
-            const score = parseFloat(data.score || 0);
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('score-circle').style.setProperty('--percent', (score * 10) + '%');
+            // 2. HIỂN THỊ ĐIỂM TỔNG
+            document.getElementById('final-score').innerText = parseFloat(data.score || 0).toFixed(2);
 
-            // 3. SỬA LỖI HIỂN THỊ CHI TIẾT
-            // Đảm bảo đọc đúng cấu trúc details từ Backend
-            const details = data.details || {};
-            document.getElementById('p1-score').innerText = (details.p1 || 0) + ' điểm';
-            document.getElementById('p2-score').innerText = (details.p2 || 0) + ' điểm';
-            document.getElementById('p3-score').innerText = (details.p3 || 0) + ' điểm';
+            // 3. HIỂN THỊ ĐIỂM CHI TIẾT (Xử lý nếu Backend chưa gửi details)
+            const d = data.details || {};
+            document.getElementById('p1').innerText = (d.p1 || 0) + ' điểm';
+            document.getElementById('p2').innerText = (d.p2 || 0) + ' điểm';
+            document.getElementById('p3').innerText = (d.p3 || 0) + ' điểm';
         }
     </script>
 </body>
-
 </html>
