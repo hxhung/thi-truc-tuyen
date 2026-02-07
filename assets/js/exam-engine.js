@@ -1,9 +1,9 @@
 /**
  * =====================================================
- * EXAM ENGINE - FINAL STANDARD VERSION
- * 1. Render: 3 Phần (Trắc nghiệm, Đúng/Sai, Điền khuyết).
- * 2. Submit: Hiển thị màn hình Kết quả (Result Screen) như bản gốc.
- * 3. Feature: Header hiển thị Title, Auto-save, Restore.
+ * EXAM ENGINE - FINAL FIXED VERSION
+ * 1. Logic Render: 3 Phần (Chuẩn Excel mới).
+ * 2. Timer: Fix lỗi đếm ngược.
+ * 3. Result UI: Khôi phục giao diện gốc (Gradient Circle).
  * =====================================================
  */
 
@@ -12,7 +12,7 @@ let studentAnswers = {};
 let examConfig = null;
 let timerInterval = null;
 
-// --- 1. KHỞI TẠO ---
+// --- 1. KHỞI TẠO & LOAD DỮ LIỆU ---
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig().then(() => {
         loadExamData();
@@ -31,6 +31,7 @@ async function loadConfig() {
 }
 
 async function loadExamData() {
+    // Lấy thông tin phiên thi
     const sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
     if (!sessionData) {
         alert('Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
@@ -38,7 +39,7 @@ async function loadExamData() {
         return;
     }
 
-    // [CHUẨN GỐC] Hiển thị Title
+    // Hiển thị Tiêu đề (Header)
     const titleEl = document.getElementById('exam-title');
     if (titleEl) {
         titleEl.innerText = sessionData.title ? sessionData.title : `MÃ ĐỀ: ${sessionData.examId}`;
@@ -47,6 +48,7 @@ async function loadExamData() {
     const container = document.getElementById('exam-container');
     container.innerHTML = '<div style="text-align:center; padding:20px;">⏳ Đang tải đề thi...</div>';
 
+    // Gọi API lấy câu hỏi
     const url = `${examConfig.api_endpoint}?action=getQuestions&examId=${sessionData.examId}`;
 
     try {
@@ -55,7 +57,13 @@ async function loadExamData() {
 
         if (json.success) {
             currentQuestions = json.data;
-            startTimer(sessionData.remainingMinutes * 60);
+
+            // [FIX 1] Khởi động đồng hồ (Chuyển phút sang giây)
+            // Đảm bảo sessionData.remainingMinutes là số
+            const minutes = parseFloat(sessionData.remainingMinutes) || 45; 
+            startTimer(minutes * 60);
+
+            // Render đề thi 3 phần
             renderExamSections(currentQuestions);
         } else {
             container.innerHTML = `<div style="color:red; text-align:center;">❌ ${json.message}</div>`;
@@ -66,22 +74,22 @@ async function loadExamData() {
     }
 }
 
-// --- 2. RENDER 3 PHẦN (LOGIC MỚI) ---
+// --- 2. RENDER GIAO DIỆN (3 PHẦN) ---
 function renderExamSections(questions) {
     const container = document.getElementById('exam-container');
-    container.innerHTML = '';
+    container.innerHTML = ''; 
 
     const p1 = questions.filter(q => q.type === 'MULTIPLE_CHOICE');
     const p2 = questions.filter(q => q.type === 'TRUE_FALSE');
     const p3 = questions.filter(q => q.type === 'FILL_IN');
 
-    // PHẦN 1
+    // PHẦN I
     if (p1.length > 0) {
         container.innerHTML += `<div class="section-header">PHẦN I: TRẮC NGHIỆM (${p1.length} câu)</div>`;
         p1.forEach((q, index) => container.appendChild(createQuestionCard_P1(q, index + 1)));
     }
 
-    // PHẦN 2 (Gom nhóm)
+    // PHẦN II (Gom nhóm)
     if (p2.length > 0) {
         container.innerHTML += `<div class="section-header">PHẦN II: TRẮC NGHIỆM ĐÚNG/SAI</div>`;
         let currentContent = null;
@@ -113,12 +121,13 @@ function renderExamSections(questions) {
         });
     }
 
-    // PHẦN 3
+    // PHẦN III
     if (p3.length > 0) {
         container.innerHTML += `<div class="section-header">PHẦN III: TRẢ LỜI NGẮN</div>`;
         p3.forEach((q, index) => container.appendChild(createQuestionCard_P3(q, index + 1)));
     }
 
+    // KaTeX Render
     if (window.renderMathInElement) {
         renderMathInElement(container, {
             delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}]
@@ -127,6 +136,7 @@ function renderExamSections(questions) {
     restoreProgress();
 }
 
+// --- 3. TEMPLATE CÂU HỎI ---
 function createQuestionCard_P1(q, index) {
     const card = document.createElement('div');
     card.className = 'question-card';
@@ -158,7 +168,7 @@ function createQuestionCard_P3(q, index) {
     return card;
 }
 
-// --- 3. TIỆN ÍCH ---
+// --- 4. TIỆN ÍCH HỆ THỐNG ---
 function saveAnswer(qId, value) {
     studentAnswers[qId] = value;
     localStorage.setItem('exam_progress', JSON.stringify(studentAnswers));
@@ -185,15 +195,46 @@ function setupAutoSave() {
     }, 30000);
 }
 
-// --- 4. NỘP BÀI (LOGIC GỐC TỪ ZIP - HIỂN THỊ KẾT QUẢ) ---
-async function submitExam() {
-    if (!confirm('Bạn có chắc chắn muốn nộp bài không?')) return;
+// --- 5. ĐỒNG HỒ ĐẾM NGƯỢC (Đã sửa logic) ---
+function startTimer(durationInSeconds) {
+    let timer = durationInSeconds; 
+    const display = document.getElementById('timer');
+    
+    // Xóa interval cũ nếu có để tránh chạy chồng chéo
+    if (timerInterval) clearInterval(timerInterval);
+
+    timerInterval = setInterval(function () {
+        let minutes = parseInt(timer / 60, 10);
+        let seconds = parseInt(timer % 60, 10);
+
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        if (display) {
+            display.textContent = minutes + ":" + seconds;
+            
+            // Hiệu ứng sắp hết giờ (đổi màu đỏ khi còn dưới 5 phút)
+            if (timer < 300) display.style.color = "red";
+        }
+
+        if (--timer < 0) {
+            clearInterval(timerInterval);
+            alert("Hết giờ làm bài!");
+            submitExam(true); // true = nộp bắt buộc
+        }
+    }, 1000);
+}
+
+// --- 6. NỘP BÀI & GIAO DIỆN KẾT QUẢ (KHÔI PHỤC CODE GỐC) ---
+async function submitExam(force = false) {
+    if (!force && !confirm('Bạn có chắc chắn muốn nộp bài không?')) return;
 
     const sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
     const payload = {
         examId: sessionData.examId,
         studentName: sessionData.studentName || 'Học sinh',
-        className: sessionData.studentClass || sessionData.className || '',
+        // [FIX] Lấy đúng tên biến studentClass từ sessionStorage
+        className: sessionData.studentClass || sessionData.className || '', 
         answers: studentAnswers
     };
 
@@ -207,44 +248,49 @@ async function submitExam() {
         }).then(r => r.json());
 
         if (res.success) {
-            // [QUAN TRỌNG] Thay vì Alert, dùng giao diện Kết quả như file gốc
-            // Lưu ý: Backend hiện tại chỉ trả về 'score', chưa trả 'correctCount'. 
-            // Nên ta hiển thị Điểm số là chính.
-            
+            // --- [FIX 2] GIAO DIỆN KẾT QUẢ GỐC CỦA BẠN ---
+            // Code này thay thế toàn bộ body bằng giao diện kết quả
             document.body.innerHTML = `
-                <div style="font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: #f4f6f9;">
-                    <div style="background: white; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 90%;">
-                        <h2 style="color: #333; margin: 0 0 20px 0;">KẾT QUẢ BÀI THI</h2>
-                        
-                        <div style="
-                            width: 120px; height: 120px; margin: 0 auto 20px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                            color: white;
-                            display: flex; align-items: center; justify-content: center;
-                            font-size: 36px; font-weight: bold;
-                            box-shadow: 0 10px 20px rgba(118, 75, 162, 0.4);
-                        ">
-                            ${res.score}
-                        </div>
-
-                        <p style="font-size: 16px; color: #555; margin-bottom: 30px;">
-                            Chúc mừng bạn đã hoàn thành bài thi!
-                        </p>
-
-                        <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button onclick="location.href='index.html'" style="
-                                background: #007bff; color: white; border: none; padding: 12px 24px;
-                                border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 15px;
-                            ">
-                                Về Trang Chủ
-                            </button>
-                        </div>
+                <style>
+                    /* Inline CSS dự phòng trường hợp mất file style */
+                    .score-gradient {
+                        width: 150px; height: 150px; margin: 20px auto;
+                        border-radius: 50%;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white; display: flex; align-items: center; justify-content: center;
+                        font-size: 48px; font-weight: bold;
+                        box-shadow: 0 10px 20px rgba(118, 75, 162, 0.4);
+                        font-family: 'Segoe UI', sans-serif;
+                    }
+                    .result-container {
+                        text-align: center; padding-top: 50px; font-family: 'Segoe UI', sans-serif;
+                        background-color: #f4f6f9; min-height: 100vh;
+                    }
+                    .btn-group button {
+                        padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px;
+                    }
+                    .btn-retry { background: #e9ecef; color: #333; }
+                    .btn-home { background: #007bff; color: white; }
+                </style>
+                
+                <div class="result-container">
+                    <h2 style="color:#333; margin:0">KẾT QUẢ</h2>
+                    
+                    <div class="score-gradient">${res.score}</div>
+                    
+                    <p style="font-size: 18px; color: #555;">
+                        Số câu đúng: <b>${res.correctCount !== undefined ? res.correctCount : '?'}</b> / ${res.totalQuestions !== undefined ? res.totalQuestions : '?'}
+                    </p>
+                    
+                    <div class="btn-group">
+                        <button class="btn-retry" onclick="location.reload()">Làm lại</button>
+                        <button class="btn-home" onclick="location.href='index.html'">Thoát</button>
                     </div>
                 </div>
             `;
-            
-            // Xóa dữ liệu phiên thi
+            // ---------------------------------------------------
+
+            sessionStorage.removeItem('currentExam');
             localStorage.removeItem('exam_progress');
             
             // Lưu lịch sử
@@ -262,28 +308,7 @@ async function submitExam() {
         }
     } catch (e) {
         alert('Lỗi kết nối! Vui lòng thử lại.');
+        console.error(e);
         if(btn) { btn.innerText = "Nộp Bài Thi"; btn.disabled = false; }
     }
-}
-
-// --- 5. TIMER ---
-function startTimer(duration) {
-    let timer = duration, minutes, seconds;
-    const display = document.getElementById('timer');
-    
-    timerInterval = setInterval(function () {
-        minutes = parseInt(timer / 60, 10);
-        seconds = parseInt(timer % 60, 10);
-
-        minutes = minutes < 10 ? "0" + minutes : minutes;
-        seconds = seconds < 10 ? "0" + seconds : seconds;
-
-        if (display) display.textContent = minutes + ":" + seconds;
-
-        if (--timer < 0) {
-            clearInterval(timerInterval);
-            alert("Hết giờ làm bài!");
-            submitExam();
-        }
-    }, 1000);
 }
