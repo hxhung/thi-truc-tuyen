@@ -232,3 +232,23 @@ body {
     .tf-item { flex-direction: column; align-items: flex-start; gap: 10px; }
     .tf-options { width: 100%; justify-content: space-between; }
 }
+/* --- LOADING OVERLAY --- */
+#loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 10000; /* Cao hơn tất cả */
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+}
+.spinner {
+    width: 50px; height: 50px;
+    border: 5px solid #f3f3f3; border-top: 5px solid #007bff;
+    border-radius: 50%; animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+.loading-text {
+    font-size: 1.2rem; font-weight: bold; color: #333;
+    animation: blink 1.5s infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes blink { 50% { opacity: 0.5; } }
