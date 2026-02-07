@@ -1,5 +1,5 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN FIX TOÀN DIỆN (UI + DATA + HISTORY)
+ * EXAM ENGINE - PHIÊN BẢN FINAL (RENDER + TIMER + SUBMIT)
  */
 
 let currentQuestions = [];
@@ -12,7 +12,7 @@ let timerInterval = null;
 document.addEventListener('DOMContentLoaded', () => {
     loadConfig().then(() => {
         loadExamData();
-        injectLoadingStyles(); // Tự động thêm CSS cho màn hình chờ
+        injectLoadingStyles();
     });
 });
 
@@ -21,78 +21,196 @@ async function loadConfig() {
         const response = await fetch('config.json');
         examConfig = await response.json();
     } catch (error) {
-        alert('Lỗi tải cấu hình!');
+        console.error("Không đọc được config.json");
     }
 }
 
+// --- 2. HÀM TẢI VÀ HIỂN THỊ DỮ LIỆU (QUAN TRỌNG NHẤT) ---
 async function loadExamData() {
-    sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
-    if (!sessionData) {
+    // Lấy dữ liệu từ index.html đã lưu
+    const sessionRaw = sessionStorage.getItem('currentExam');
+    
+    if (!sessionRaw) {
+        alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
         window.location.href = 'index.html';
         return;
     }
-    // Render câu hỏi và timer ở đây (giữ nguyên logic render cũ của bạn nếu có)
-    // ...
+
+    sessionData = JSON.parse(sessionRaw);
     
-    // Khôi phục tên thí sinh từ LocalStorage nếu Session bị mất
-    if (!sessionData.studentName) {
-        sessionData.studentName = localStorage.getItem('lastStudentName') || "Học sinh";
+    // 1. Hiển thị tiêu đề và Tên
+    document.getElementById('exam-title').innerText = (sessionData.title || "BÀI THI") + " - " + sessionData.examId;
+    
+    // 2. Lấy danh sách câu hỏi
+    if (sessionData.questions && sessionData.questions.length > 0) {
+        currentQuestions = sessionData.questions;
+        
+        // GỌI HÀM VẼ GIAO DIỆN (Phần bạn còn thiếu)
+        renderExamInterface(currentQuestions);
+        
+        // BẮT ĐẦU ĐẾM NGƯỢC
+        startTimer(sessionData.duration);
+    } else {
+        document.getElementById('exam-container').innerHTML = `<h3 style="text-align:center; color:red">Không có dữ liệu câu hỏi!</h3>`;
     }
 }
 
-// --- 2. HÀM TẠO CSS CHO LOADING (Không cần sửa file .css) ---
-function injectLoadingStyles() {
-    const style = document.createElement('style');
-    style.innerHTML = `
-        #loading-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            z-index: 99999; display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
+// --- 3. HÀM VẼ GIAO DIỆN CÂU HỎI ---
+function renderExamInterface(questions) {
+    const container = document.getElementById('exam-container');
+    container.innerHTML = ''; // Xóa chữ "Đang tải..."
+
+    // Phân loại câu hỏi
+    const p1 = questions.filter(q => q.type === 'MULTIPLE_CHOICE');
+    const p2 = questions.filter(q => q.type === 'TRUE_FALSE');
+    const p3 = questions.filter(q => q.type === 'FILL_IN');
+
+    // --- VẼ PHẦN I: TRẮC NGHIỆM ---
+    if (p1.length > 0) {
+        let html = `<div class="section-header">PHẦN I: TRẮC NGHIỆM KHÁCH QUAN</div>`;
+        p1.forEach((q, index) => {
+            html += `
+            <div class="question-card">
+                <div class="q-stem"><strong>Câu ${index + 1}:</strong> ${renderMath(q.contentSub || q.contentRoot)}</div>
+                ${q.image ? `<img src="${q.image}" style="max-width:100%; margin-bottom:10px">` : ''}
+                <div class="options-grid">
+                    ${['A', 'B', 'C', 'D'].map(opt => `
+                        <label class="option-label" style="display:flex; align-items:center; gap:5px; padding:8px; border:1px solid #ddd; border-radius:5px; cursor:pointer">
+                            <input type="radio" name="q_${q.id}" value="${opt}" onchange="saveAnswer(${q.rowIndex}, '${opt}')">
+                            <span><b>${opt}.</b> ${q.options[opt] || ''}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>`;
+        });
+        container.innerHTML += html;
+    }
+
+    // --- VẼ PHẦN II: ĐÚNG SAI (NHÓM THEO CÂU DẪN) ---
+    if (p2.length > 0) {
+        let html = `<div class="section-header">PHẦN II: TRẮC NGHIỆM ĐÚNG SAI</div>`;
+        
+        // Nhóm các câu hỏi theo contentRoot (Câu dẫn chung)
+        const groups = {};
+        p2.forEach(q => {
+            const root = q.contentRoot || "Câu hỏi chung";
+            if (!groups[root]) groups[root] = [];
+            groups[root].push(q);
+        });
+
+        let gIndex = 1;
+        for (const [rootText, items] of Object.entries(groups)) {
+            html += `
+            <div class="question-group">
+                <div class="q-stem"><strong>Câu ${gIndex}:</strong> ${renderMath(rootText)}</div>
+                ${items.map((q, i) => `
+                    <div class="sub-question-row">
+                        <div class="sub-text">
+                             <strong>${String.fromCharCode(97 + i)})</strong> ${renderMath(q.contentSub)}
+                        </div>
+                        <div class="tf-options">
+                            <label><input type="radio" name="q_${q.id}" value="T" onchange="saveAnswer(${q.rowIndex}, 'T')"> Đúng</label>
+                            <label><input type="radio" name="q_${q.id}" value="F" onchange="saveAnswer(${q.rowIndex}, 'F')"> Sai</label>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>`;
+            gIndex++;
         }
-        .spinner {
-            width: 60px; height: 60px;
-            border: 6px solid #f3f3f3; border-top: 6px solid #007bff;
-            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
-        }
-        .loading-msg { font-size: 18px; font-weight: bold; color: #333; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    `;
-    document.head.appendChild(style);
+        container.innerHTML += html;
+    }
+
+    // --- VẼ PHẦN III: ĐIỀN SỐ ---
+    if (p3.length > 0) {
+        let html = `<div class="section-header">PHẦN III: TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
+        p3.forEach((q, index) => {
+            html += `
+            <div class="question-card">
+                <div class="q-stem"><strong>Câu ${index + 1}:</strong> ${renderMath(q.contentSub || q.contentRoot)}</div>
+                ${q.image ? `<img src="${q.image}" style="max-width:100%">` : ''}
+                <input type="text" class="fill-input" placeholder="Nhập đáp án của bạn..." 
+                    onchange="saveAnswer(${q.rowIndex}, this.value)">
+            </div>`;
+        });
+        container.innerHTML += html;
+    }
+
+    // Render công thức toán (nếu có dùng Katex)
+    if (window.renderMathInElement) {
+        renderMathInElement(container, {
+            delimiters: [
+                {left: "$$", right: "$$", display: true},
+                {left: "$", right: "$", display: false}
+            ]
+        });
+    }
 }
 
-// --- 3. HÀM NỘP BÀI CHUẨN ---
+// Hàm hỗ trợ render text (đơn giản)
+function renderMath(text) {
+    if (!text) return "";
+    return text.replace(/\n/g, "<br>");
+}
+
+// --- 4. LOGIC LƯU ĐÁP ÁN ---
+window.saveAnswer = function(rowIndex, value) {
+    studentAnswers[rowIndex] = value;
+    // Có thể lưu vào sessionStorage để F5 không mất bài (Tuỳ chọn)
+    sessionStorage.setItem('studentAnswers', JSON.stringify(studentAnswers));
+};
+
+// --- 5. LOGIC ĐỒNG HỒ ĐẾM NGƯỢC ---
+function startTimer(durationMinutes) {
+    let timeLeft = durationMinutes * 60;
+    const timerElement = document.getElementById('timer');
+    
+    // Cập nhật ngay lập tức
+    updateTimerDisplay(timeLeft, timerElement);
+
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay(timeLeft, timerElement);
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert("Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.");
+            submitExam(true); // Force submit
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay(seconds, element) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    element.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    
+    // Đổi màu khi sắp hết giờ
+    if (seconds < 300) element.style.color = "red";
+}
+
+// --- 6. HÀM NỘP BÀI (ĐÃ SỬA CHUẨN TỪ CODE TRƯỚC CỦA BẠN) ---
 window.submitExam = async function(force = false) {
-    // 1. Hỏi xác nhận
-    if (!force) {
-        if (!confirm('Bạn có chắc chắn muốn nộp bài?')) return;
-    }
+    if (!force && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
 
-    // 2. HIỆN MÀN HÌNH CHỜ (Loading Overlay)
+    // 1. Hiện Loading
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
-    overlay.innerHTML = `
-        <div class="spinner"></div>
-        <div class="loading-msg">Đang chấm điểm... Vui lòng đợi!</div>
-    `;
+    overlay.innerHTML = `<div class="spinner"></div><div class="loading-msg">Đang chấm điểm...</div>`;
     document.body.appendChild(overlay);
 
     try {
-        // 3. Chuẩn bị dữ liệu
-        // Lấy thông tin mới nhất từ localStorage để đảm bảo không bị null
         const sName = sessionData.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
         const sClass = localStorage.getItem('lastStudentClass') || "";
 
         const payload = JSON.stringify({
             examId: sessionData.examId,
             studentName: sName,
-            studentClass: sClass, // Gửi lớp lên Server
+            studentClass: sClass,
             answers: studentAnswers,
             startTime: sessionData.startTime,
             submitTime: new Date().toISOString()
         });
 
-        // 4. Gửi request
         const response = await fetch(examConfig.api_endpoint, {
             method: 'POST',
             redirect: 'follow',
@@ -102,45 +220,49 @@ window.submitExam = async function(force = false) {
 
         const result = await response.json();
 
-        // 5. Xử lý thành công
         if (result.success) {
-            // A. Lưu lịch sử (Sửa lỗi ngày giờ cho statistics.html)
+            // Lưu lịch sử
             saveToHistory({
                 testName: sessionData.title || result.examId,
                 examId: result.examId,
                 studentName: sName,
                 score: result.score,
-                date: new Date().toISOString() // Lưu định dạng chuẩn ISO
+                date: new Date().toISOString()
             });
 
-            // B. Lưu kết quả để hiển thị trang result
-            // Gán lại tên/lớp vào result để trang sau đọc được
+            // Lưu kết quả để trang result.html hiển thị
             result.studentName = sName;
             result.studentClass = sClass;
             sessionStorage.setItem('examResult', JSON.stringify(result));
 
-            // C. Dọn dẹp và Chuyển trang
+            // Dọn dẹp và chuyển trang
             sessionStorage.removeItem('currentExam');
             localStorage.removeItem('exam_progress');
-            window.location.href = 'result.html'; 
+            window.location.href = 'result.html';
         } else {
             throw new Error(result.message);
         }
 
     } catch (error) {
-        // Nếu lỗi thì tắt màn hình chờ để báo lỗi
-        if(document.getElementById('loading-overlay')) {
-            document.getElementById('loading-overlay').remove();
-        }
+        if(document.getElementById('loading-overlay')) document.getElementById('loading-overlay').remove();
         alert("Lỗi nộp bài: " + error.message);
     }
 };
 
-// Hàm lưu lịch sử vào LocalStorage
+function injectLoadingStyles() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    `;
+    document.head.appendChild(style);
+}
+
 function saveToHistory(record) {
     try {
         const oldData = JSON.parse(localStorage.getItem('exam_results') || '[]');
         oldData.push(record);
         localStorage.setItem('exam_results', JSON.stringify(oldData));
-    } catch (e) { console.error(e); }
+    } catch (e) {}
 }
