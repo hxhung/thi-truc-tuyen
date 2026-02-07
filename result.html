@@ -92,28 +92,29 @@
     </div>
 
     <script>
-        // Lấy dữ liệu từ bộ nhớ trình duyệt
-        const resultData = JSON.parse(sessionStorage.getItem('examResult'));
-        const sessionData = JSON.parse(sessionStorage.getItem('currentExam')) || {};
-
-        if (resultData) {
-            // Hiển thị tên
-            document.getElementById('student-name').innerText = "Thí sinh: " + (resultData.studentName || "Bạn");
+        const rawData = sessionStorage.getItem('examResult');
+        if (!rawData) {
+            alert('Không tìm thấy kết quả! Quay về trang chủ.');
+            window.location.href = 'index.html';
+        } else {
+            const data = JSON.parse(rawData);
             
-            // Hiển thị điểm tổng
-            const score = parseFloat(resultData.score || 0);
+            // 1. SỬA LỖI HIỂN THỊ TÊN
+            // Ưu tiên lấy từ data trả về, nếu không có thì lấy 'Thí sinh'
+            document.getElementById('student-name').innerText = 
+                "Thí sinh: " + (data.studentName || "Thí sinh");
+
+            // 2. HIỂN THỊ ĐIỂM
+            const score = parseFloat(data.score || 0);
             document.getElementById('final-score').innerText = score;
             document.getElementById('score-circle').style.setProperty('--percent', (score * 10) + '%');
 
-            // Hiển thị chi tiết
-            const details = resultData.details || {};
+            // 3. SỬA LỖI HIỂN THỊ CHI TIẾT
+            // Đảm bảo đọc đúng cấu trúc details từ Backend
+            const details = data.details || {};
             document.getElementById('p1-score').innerText = (details.p1 || 0) + ' điểm';
             document.getElementById('p2-score').innerText = (details.p2 || 0) + ' điểm';
             document.getElementById('p3-score').innerText = (details.p3 || 0) + ' điểm';
-        } else {
-            // Nếu không có kết quả thì quay về trang chủ
-            alert('Không tìm thấy kết quả!');
-            window.location.href = 'index.html';
         }
     </script>
 </body>
