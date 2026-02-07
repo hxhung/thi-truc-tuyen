@@ -379,86 +379,83 @@ function startTimer(minutes) {
 // SUBMIT EXAM - MODAL MỚI ĐẸP HƠN
 // =====================================================
 
+// Gán vào window để HTML gọi được
 window.submitExam = async function(force = false) {
+    
+    // 1. Nếu không phải là "ép nộp" (hết giờ), thì hỏi xác nhận
     if (!force) {
-        const answeredCount = Object.keys(studentAnswers).length;
-        const totalCount = currentQuestions.length;
+        const total = currentQuestions.length;
+        const answered = Object.keys(studentAnswers).length;
         
-        if (answeredCount < totalCount) {
-            const unanswered = totalCount - answeredCount;
-            if (!confirm(`⚠️ Bạn còn ${unanswered} câu chưa trả lời.\n\nBạn có chắc muốn nộp bài?`)) {
-                return;
+        // Nếu chưa làm xong thì cảnh báo
+        if (answered < total) {
+            if (!confirm(`Bạn mới làm ${answered}/${total} câu. Chắc chắn nộp bài?`)) {
+                return; // Hủy nộp
             }
         } else {
-            if (!confirm('✅ Bạn đã hoàn thành tất cả câu hỏi.\n\nNộp bài ngay?')) {
-                return;
-            }
+            // Nếu làm xong rồi thì hỏi xác nhận lần cuối
+            if (!confirm("Bạn có chắc chắn muốn nộp bài?")) return;
         }
     }
 
-    const overlay = document.getElementById('result-modal-overlay');
-    const modalBody = document.getElementById('modal-body');
-    overlay.style.display = 'flex';
-    modalBody.innerHTML = `
-        <h3>Đang chấm điểm...</h3>
-        <div class="spinner"></div>
-        <p style="color: #666; font-size: 14px; margin-top: 10px;">
-            Vui lòng đợi trong giây lát
-        </p>
-    `;
-
-    if (timerInterval) clearInterval(timerInterval);
-    if (autoSaveInterval) clearInterval(autoSaveInterval);
+    // 2. Khóa nút nộp bài (Tránh bấm 2 lần)
+    const submitBtn = document.querySelector('button[onclick="submitExam()"]');
+    if (submitBtn) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nộp...';
+        submitBtn.disabled = true;
+    }
 
     try {
-        const payload = {
+        // 3. Chuẩn bị dữ liệu (Lấy từ sessionData và localStorage)
+        const payload = JSON.stringify({
             examId: sessionData.examId,
-            studentName: sessionData.studentName,
-            studentClass: sessionData.studentClass,
-            answers: studentAnswers
-        };
+            studentName: sessionData.studentName || 'Thí sinh tự do',
+            studentClass: localStorage.getItem('lastStudentClass') || 'N/A',
+            answers: studentAnswers,
+            startTime: sessionData.startTime,
+            submitTime: new Date().toISOString(),
+            isAutoSubmit: force // Đánh dấu là tự nộp do hết giờ (để thống kê nếu cần)
+        });
 
+        console.log("Đang gửi dữ liệu...", payload);
+
+        // 4. Gửi Request (FIX LỖI CORS bằng text/plain)
         const response = await fetch(examConfig.api_endpoint, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
+            redirect: 'follow',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: payload
         });
+
+        if (!response.ok) throw new Error("Lỗi kết nối Server");
 
         const result = await response.json();
 
+        // 5. Xử lý thành công
         if (result.success) {
-            // Lưu vào localStorage
-            saveToLocalStorage({
-                timestamp: new Date().toISOString(),
-                testName: sessionData.title,
-                studentName: sessionData.studentName,
-                score: result.score,
-                correctAnswers: result.correctCount,
-                totalQuestions: result.totalQuestions
-            });
-
-            // ===== MODAL MỚI VỚI BREAKDOWN =====
-            modalBody.innerHTML = createResultModal(result);
-
-            // Xóa progress
-            localStorage.removeItem('exam_progress');
             sessionStorage.removeItem('currentExam');
-
+            localStorage.removeItem('exam_progress');
+            sessionStorage.setItem('lastExamResult', JSON.stringify(result));
+            
+            alert(force 
+                ? `Hết giờ làm bài!\nHệ thống đã tự động nộp.\nĐiểm số: ${result.score}/10` 
+                : `Nộp bài thành công!\nĐiểm số: ${result.score}/10`
+            );
+            
+            window.location.href = 'index.html'; 
         } else {
-            throw new Error(result.message || 'Lỗi không xác định');
+            throw new Error(result.message || "Lỗi xử lý từ Server");
         }
 
     } catch (error) {
-        console.error('❌ Submit error:', error);
-        modalBody.innerHTML = `
-            <h3 style="color:red">❌ Lỗi!</h3>
-            <p>${error.message}</p>
-            <button class="btn-retry" onclick="location.reload()">
-                🔄 Thử lại
-            </button>
-        `;
+        console.error("Lỗi nộp bài:", error);
+        alert("Có lỗi khi nộp bài: " + error.message);
+        
+        // Mở lại nút nếu lỗi (chỉ khi không phải force)
+        if (submitBtn && !force) {
+            submitBtn.innerHTML = 'NỘP BÀI';
+            submitBtn.disabled = false;
+        }
     }
 };
 
