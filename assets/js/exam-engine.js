@@ -380,32 +380,41 @@ function startTimer(minutes) {
 // =====================================================
 
 // Gán vào window để HTML gọi được
+// --- HÀM NỘP BÀI ĐÃ SỬA CHỮA TOÀN DIỆN ---
 window.submitExam = async function(force = false) {
     const submitBtn = document.getElementById('btn-submit-all') || document.querySelector('.btn-submit');
-
-    // 1. Hỏi xác nhận (trừ khi hết giờ thì force=true)
+    
+    // 1. Xác nhận (nếu chưa hết giờ)
     if (!force) {
-        const total = currentQuestions.length || 0;
-        const answered = Object.keys(studentAnswers).length;
-        if (!confirm(`Bạn đã làm ${answered}/${total} câu. Bạn có chắc chắn nộp bài không?`)) return;
+        if (!confirm('Bạn có chắc chắn muốn nộp bài?')) return;
     }
 
-    // 2. Hiệu ứng đang nộp
-    if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang chấm...';
-        submitBtn.disabled = true;
-    }
+    // 2. HIỆN MÀN HÌNH LOADING (Làm mờ + Xoay)
+    const overlayHtml = `
+        <div id="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">Đang chấm điểm và xử lý kết quả...</div>
+            <div style="font-size:0.9rem; color:#666; margin-top:10px">Vui lòng không tắt trình duyệt</div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', overlayHtml);
 
     try {
-        // 3. Gửi dữ liệu về Server
+        // 3. CHUẨN BỊ DỮ LIỆU CHÍNH XÁC
+        // Lấy tên và lớp: Ưu tiên từ session, nếu không có thì lấy từ localStorage
+        const storedClass = localStorage.getItem('lastStudentClass') || "";
+        const storedName = sessionData.studentName || localStorage.getItem('lastStudentName') || "Thí sinh tự do";
+
         const payload = JSON.stringify({
-            examId: sessionData?.examId,
-            studentName: sessionData?.studentName || 'Thí sinh',
+            examId: sessionData.examId,
+            studentName: storedName,
+            studentClass: storedClass, // SỬA LỖI 3: Gửi lớp lên Server
             answers: studentAnswers,
-            startTime: sessionData?.startTime,
+            startTime: sessionData.startTime,
             submitTime: new Date().toISOString()
         });
 
+        // 4. GỬI REQUEST
         const response = await fetch(examConfig.api_endpoint, {
             method: 'POST',
             redirect: 'follow',
@@ -415,29 +424,54 @@ window.submitExam = async function(force = false) {
 
         const result = await response.json();
 
-        // 4. Xử lý kết quả -> CHUYỂN TRANG
+        // 5. XỬ LÝ KẾT QUẢ
         if (result.success) {
-            // Lưu kết quả vào bộ nhớ để trang result.html đọc được
+            // SỬA LỖI 4: LƯU VÀO LOCAL STORAGE CHO FILE STATISTICS.HTML ĐỌC
+            saveToHistory({
+                testName: sessionData.title || result.examId,
+                examId: result.examId,
+                studentName: storedName,
+                score: result.score,
+                date: new Date().toISOString(),
+                details: result.details // Lưu chi tiết để thống kê nếu cần
+            });
+
+            // Lưu kết quả tạm để trang result.html hiển thị
+            // Gộp thông tin thí sinh vào object result để trang sau hiển thị đúng
+            result.studentName = storedName; 
+            result.studentClass = storedClass;
             sessionStorage.setItem('examResult', JSON.stringify(result));
             
-            // Xóa trạng thái đang thi dở
+            // Xóa dữ liệu bài đang làm
             sessionStorage.removeItem('currentExam'); 
             localStorage.removeItem('exam_progress');
 
-            // === LỆNH QUAN TRỌNG NHẤT ĐÂY ===
-            window.location.href = 'result.html'; 
-            // =================================
+            // Chuyển trang
+            window.location.replace('result.html'); 
         } else {
-            alert("Lỗi từ hệ thống: " + result.message);
-            if(submitBtn) { submitBtn.innerHTML = 'NỘP BÀI'; submitBtn.disabled = false; }
+            throw new Error(result.message);
         }
 
     } catch (error) {
-        console.error("Lỗi nộp bài:", error);
-        alert("Không thể kết nối đến máy chủ. Vui lòng thử lại!");
-        if(submitBtn) { submitBtn.innerHTML = 'NỘP BÀI'; submitBtn.disabled = false; }
+        console.error(error);
+        // Xóa màn hình loading nếu lỗi
+        const loading = document.getElementById('loading-overlay');
+        if (loading) loading.remove();
+        
+        alert("Lỗi khi nộp bài: " + error.message);
     }
 };
+
+// Hàm phụ trợ: Lưu lịch sử thi (cho statistics.html)
+function saveToHistory(record) {
+    try {
+        const history = JSON.parse(localStorage.getItem('exam_results') || '[]');
+        history.push(record);
+        localStorage.setItem('exam_results', JSON.stringify(history));
+    } catch (e) {
+        console.error("Không thể lưu lịch sử:", e);
+    }
+}
 /**
  * Tạo HTML cho modal kết quả đẹp mắt
  */
