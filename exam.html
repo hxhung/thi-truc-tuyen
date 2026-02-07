@@ -107,6 +107,89 @@
             .tf-row { flex-direction: column; align-items: flex-start; }
             .tf-options { margin-top: 8px; width: 100%; justify-content: flex-start; gap: 30px; }
         }
+		/* --- SECTION STYLES --- */
+.section-header {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 30px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    text-transform: uppercase;
+}
+
+/* --- PART II: GROUPED QUESTIONS --- */
+.question-group {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.q-stem {
+    font-size: 16px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.sub-question-row {
+    display: flex;
+    justify-content: space-between; /* Đẩy text sang trái, nút sang phải */
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px dashed #f0f0f0;
+}
+
+.sub-text {
+    flex: 1; /* Chiếm hết khoảng trống */
+    margin-right: 20px;
+}
+
+.tf-options {
+    display: flex;
+    gap: 15px;
+    min-width: 150px; /* Đảm bảo nút không bị co lại */
+}
+
+.tf-btn {
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* --- PART I & III: CARDS --- */
+.question-card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 cột cho đáp án ABCD */
+    gap: 10px;
+    margin-top: 10px;
+}
+@media (max-width: 600px) {
+    .options-grid { grid-template-columns: 1fr; } /* Mobile hiện 1 cột */
+    .sub-question-row { flex-direction: column; align-items: flex-start; }
+    .tf-options { margin-top: 5px; width: 100%; justify-content: space-around; }
+}
+
+.fill-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-top: 10px;
+}
     </style>
 </head>
 <body>
