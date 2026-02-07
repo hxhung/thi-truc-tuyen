@@ -381,24 +381,16 @@ function startTimer(minutes) {
 
 // Gán vào window để HTML gọi được
 window.submitExam = async function(force = false) {
-    
-    // 1. Nếu không phải là "ép nộp" (hết giờ), thì hỏi xác nhận
     if (!force) {
         const total = currentQuestions.length;
         const answered = Object.keys(studentAnswers).length;
-        
-        // Nếu chưa làm xong thì cảnh báo
         if (answered < total) {
-            if (!confirm(`Bạn mới làm ${answered}/${total} câu. Chắc chắn nộp bài?`)) {
-                return; // Hủy nộp
-            }
+            if (!confirm(`Bạn mới làm ${answered}/${total} câu. Chắc chắn nộp bài?`)) return;
         } else {
-            // Nếu làm xong rồi thì hỏi xác nhận lần cuối
             if (!confirm("Bạn có chắc chắn muốn nộp bài?")) return;
         }
     }
 
-    // 2. Khóa nút nộp bài (Tránh bấm 2 lần)
     const submitBtn = document.querySelector('button[onclick="submitExam()"]');
     if (submitBtn) {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang nộp...';
@@ -406,20 +398,15 @@ window.submitExam = async function(force = false) {
     }
 
     try {
-        // 3. Chuẩn bị dữ liệu (Lấy từ sessionData và localStorage)
         const payload = JSON.stringify({
             examId: sessionData.examId,
             studentName: sessionData.studentName || 'Thí sinh tự do',
             studentClass: localStorage.getItem('lastStudentClass') || 'N/A',
             answers: studentAnswers,
             startTime: sessionData.startTime,
-            submitTime: new Date().toISOString(),
-            isAutoSubmit: force // Đánh dấu là tự nộp do hết giờ (để thống kê nếu cần)
+            submitTime: new Date().toISOString()
         });
 
-        console.log("Đang gửi dữ liệu...", payload);
-
-        // 4. Gửi Request (FIX LỖI CORS bằng text/plain)
         const response = await fetch(examConfig.api_endpoint, {
             method: 'POST',
             redirect: 'follow',
@@ -427,32 +414,23 @@ window.submitExam = async function(force = false) {
             body: payload
         });
 
-        if (!response.ok) throw new Error("Lỗi kết nối Server");
-
         const result = await response.json();
 
-        // 5. Xử lý thành công
         if (result.success) {
+            // Xóa dữ liệu tạm
             sessionStorage.removeItem('currentExam');
             localStorage.removeItem('exam_progress');
-            sessionStorage.setItem('lastExamResult', JSON.stringify(result));
             
-            alert(force 
-                ? `Hết giờ làm bài!\nHệ thống đã tự động nộp.\nĐiểm số: ${result.score}/10` 
-                : `Nộp bài thành công!\nĐiểm số: ${result.score}/10`
-            );
+            // --- SỬA ĐÚNG CHỖ NÀY: GỌI MODAL THAY VÌ ALERT ---
+            showResultModal(result); 
             
-            window.location.href = 'index.html'; 
         } else {
             throw new Error(result.message || "Lỗi xử lý từ Server");
         }
 
     } catch (error) {
-        console.error("Lỗi nộp bài:", error);
-        alert("Có lỗi khi nộp bài: " + error.message);
-        
-        // Mở lại nút nếu lỗi (chỉ khi không phải force)
-        if (submitBtn && !force) {
+        alert("Lỗi nộp bài: " + error.message);
+        if (submitBtn) {
             submitBtn.innerHTML = 'NỘP BÀI';
             submitBtn.disabled = false;
         }
@@ -799,3 +777,28 @@ window.clearProgress = function() {
     localStorage.removeItem('exam_progress');
     console.log('✅ Progress cleared');
 };
+function showResultModal(data) {
+    // Nếu backend chưa trả về details thì để mặc định là 0
+    const p1 = data.details ? data.details.p1 : 0;
+    const p2 = data.details ? data.details.p2 : 0;
+    const p3 = data.details ? data.details.p3 : 0;
+
+    const modalHtml = `
+        <div class="modal-overlay">
+            <div class="result-card">
+                <h2 style="margin:0; color:#333;">KẾT QUẢ BÀI THI</h2>
+                <div class="score-big">${data.score}</div>
+                <div style="color:#666; margin-bottom:15px;">Tổng điểm (Thang 10)</div>
+                
+                <div class="score-details">
+                    <div class="detail-row"><span>Phần I (Trắc nghiệm):</span><strong>${p1} đ</strong></div>
+                    <div class="detail-row"><span>Phần II (Đúng/Sai):</span><strong>${p2} đ</strong></div>
+                    <div class="detail-row" style="border:none;"><span>Phần III (Điền số):</span><strong>${p3} đ</strong></div>
+                </div>
+
+                <button class="btn-finish" onclick="window.location.href='index.html'">VỀ TRANG CHỦ</button>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
