@@ -1,132 +1,680 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <title>Vào Phòng Thi</title>
+    <title>Vào Phòng Thi | Hệ thống Thi Trực Tuyến</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hệ thống thi trực tuyến môn Toán THPT">
+    
+    <!-- Import API Connector -->
+    <script src="assets/js/api-connector.js"></script>
+    
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f4f6f9; margin: 0; }
-        #login-box { background: white; padding: 40px 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); text-align: center; width: 320px; }
-        h2 { margin-top: 0; color: #333; margin-bottom: 20px; }
-        
-        /* Input Styles */
-        .input-group { margin-bottom: 15px; text-align: left; }
-        label { font-weight: 600; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 15px; transition: 0.3s; }
-        input:focus { border-color: #007bff; outline: none; }
-        
-        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 10px; transition: 0.3s; }
-        button:hover { background-color: #0056b3; }
-        
-        #msg { margin-top: 15px; color: #dc3545; font-size: 14px; min-height: 20px; }
-        .hidden { display: none; }
+        /* ===== ROOT VARIABLES ===== */
+        :root {
+            --primary: #007bff;
+            --primary-dark: #0056b3;
+            --secondary: #6c757d;
+            --secondary-dark: #5a6268;
+            --danger: #dc3545;
+            --success: #28a745;
+            --warning: #ffc107;
+            --bg-page: #f4f6f9;
+            --bg-card: #ffffff;
+            --text-main: #333;
+            --text-muted: #555;
+            --border: #ddd;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        /* ===== GLOBAL STYLES ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        /* ===== LOGIN BOX ===== */
+        #login-box {
+            background: var(--bg-card);
+            padding: 40px 35px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 380px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 28px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        h2 {
+            margin: 0 0 8px 0;
+            color: var(--text-main);
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        /* ===== INPUT GROUPS ===== */
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+
+        label {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 6px;
+            transition: color 0.3s;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 16px;
+            pointer-events: none;
+            transition: color 0.3s;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+
+        input:focus + .input-icon {
+            color: var(--primary);
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        /* Input validation states */
+        input.error {
+            border-color: var(--danger);
+            background: #fff5f5;
+        }
+
+        input.success {
+            border-color: var(--success);
+        }
+
+        /* ===== LATE SECTION ===== */
+        #late-section {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #e0e0e0;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #late-section label {
+            color: var(--danger);
+        }
+
+        /* ===== BUTTONS ===== */
+        button {
+            width: 100%;
+            padding: 13px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Secondary Button */
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: var(--secondary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+        }
+
+        /* ===== MESSAGE BOX ===== */
+        #msg {
+            margin: 15px 0;
+            font-size: 14px;
+            min-height: 24px;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        #msg:empty {
+            padding: 0;
+            min-height: 0;
+        }
+
+        #msg.error {
+            background: #fff5f5;
+            color: var(--danger);
+            border: 1px solid #ffebee;
+        }
+
+        #msg.success {
+            background: #f1f8f4;
+            color: var(--success);
+            border: 1px solid #d4edda;
+        }
+
+        #msg.info {
+            background: #e7f3ff;
+            color: var(--primary);
+            border: 1px solid #cce5ff;
+        }
+
+        /* ===== LOADING SPINNER ===== */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 480px) {
+            #login-box {
+                padding: 30px 25px;
+            }
+
+            h2 {
+                font-size: 22px;
+            }
+
+            input {
+                padding: 11px 11px 11px 38px;
+                font-size: 14px;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 15px;
+            }
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .hidden {
+            display: none !important;
+        }
+
+        .mt-2 {
+            margin-top: 10px;
+        }
+
+        .text-center {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div id="login-box">
-        <h2>VÀO PHÒNG THI</h2>
+        <!-- Header -->
+        <div class="header">
+            <div class="header-icon">
+                📝
+            </div>
+            <h2>VÀO PHÒNG THI</h2>
+            <p class="subtitle">Hệ thống thi trực tuyến môn Toán THPT</p>
+        </div>
+
+        <!-- Form inputs -->
+        <div class="input-group">
+            <label for="studentName">Họ và Tên <span style="color: red;">*</span></label>
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="studentName" 
+                    placeholder="Nhập họ tên đầy đủ..."
+                    autocomplete="name"
+                    required
+                >
+                <span class="input-icon">👤</span>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="studentClass">Lớp <span style="color: red;">*</span></label>
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="studentClass" 
+                    placeholder="VD: 12A1"
+                    autocomplete="off"
+                    required
+                >
+                <span class="input-icon">🎓</span>
+            </div>
+        </div>
         
         <div class="input-group">
-            <label>Mã Đề Thi</label>
-            <input type="text" id="exam-code" placeholder="Ví dụ: TOAN10">
+            <label for="examId">Mã Đề Thi <span style="color: red;">*</span></label>
+            <div class="input-wrapper">
+                <input 
+                    type="text" 
+                    id="examId" 
+                    placeholder="Nhập mã đề (VD: TOAN10)"
+                    autocomplete="off"
+                    required
+                >
+                <span class="input-icon">📋</span>
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>Họ và Tên</label>
-            <input type="text" id="student-name" placeholder="Nhập họ tên...">
+        <!-- Late Entry Section (Hidden by default) -->
+        <div id="late-section">
+            <div class="input-group">
+                <label for="lateCode">Mã Vào Muộn <span style="color: red;">*</span></label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="lateCode" 
+                        placeholder="Nhập mã do giáo viên cung cấp"
+                        autocomplete="off"
+                    >
+                    <span class="input-icon">🔑</span>
+                </div>
+                <small style="color: var(--text-muted); display: block; margin-top: 5px;">
+                    ⏰ Bạn đã vào muộn. Vui lòng nhập mã từ giám thị.
+                </small>
+            </div>
         </div>
 
-        <div class="input-group">
-            <label>Lớp</label>
-            <input type="text" id="student-class" placeholder="Ví dụ: 10A1">
-        </div>
-
-        <div id="late-section" class="hidden input-group">
-            <label style="color:red">Mã Vào Muộn (Nếu có)</label>
-            <input type="text" id="late-code" placeholder="Nhập mã giám thị cấp...">
-        </div>
-
-        <button onclick="checkExam()" id="btn-login">VÀO THI</button>
+        <!-- Message Box -->
         <div id="msg"></div>
+        
+        <!-- Action Buttons -->
+        <button id="btn-submit" class="btn-primary" onclick="checkAndStart()">
+            🚀 Bắt đầu thi
+        </button>
+        
+        <button class="btn-secondary" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/'">
+            🏠 Trang chủ
+        </button>
+
+        <!-- Footer -->
+        <div class="footer">
+            Cần hỗ trợ? 
+            <a href="https://hxhung.github.io/web-trac-nghiem/" target="_blank">Liên hệ</a>
+        </div>
     </div>
 
-    <script src="assets/js/api-connector.js"></script>
     <script>
-        async function checkExam() {
-            // Lấy dữ liệu từ ô nhập
-            const eid = document.getElementById('exam-code').value.trim().toUpperCase();
-            const name = document.getElementById('student-name').value.trim();
-            const sClass = document.getElementById('student-class').value.trim();
-            const late = document.getElementById('late-code').value.trim(); // Biến này tên là 'late'
-            
-            const btn = document.getElementById('btn-login');
-            const msg = document.getElementById('msg');
+        // =====================================================
+        // GLOBAL VARIABLES & INITIALIZATION
+        // =====================================================
+        const elements = {
+            name: document.getElementById('studentName'),
+            class: document.getElementById('studentClass'),
+            examId: document.getElementById('examId'),
+            lateCode: document.getElementById('lateCode'),
+            btn: document.getElementById('btn-submit'),
+            msg: document.getElementById('msg'),
+            lateSection: document.getElementById('late-section')
+        };
 
-            // Validate dữ liệu
-            if (!eid || !name || !sClass) {
-                msg.innerText = "Vui lòng nhập đầy đủ Mã đề, Họ tên và Lớp!";
+        // Load saved data when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSavedData();
+            setupKeyboardShortcuts();
+            setupAutoSave();
+        });
+
+        // =====================================================
+        // MAIN FUNCTION - CHECK ACCESS & START EXAM
+        // =====================================================
+        async function checkAndStart() {
+            // Get input values
+            const name = elements.name.value.trim();
+            const sClass = elements.class.value.trim();
+            const eid = elements.examId.value.trim().toUpperCase();
+            const lateCode = elements.lateCode.value.trim();
+
+            // Clear previous messages
+            clearMessage();
+
+            // Validate inputs
+            if (!validateInputs(name, sClass, eid)) {
                 return;
             }
 
-            msg.innerText = "Đang kiểm tra...";
-            btn.disabled = true;
+            // Disable button and show loading
+            setLoading(true);
 
             try {
-                // SỬA LỖI: Truyền đúng biến 'late' vào hàm (Code cũ của bạn đang ghi 'lateCode' gây lỗi)
-                const res = await checkExamAccess(eid, late); 
+                // Step 1: Check exam access
+                showMessage('info', '<div class="spinner"></div> Đang kiểm tra quyền truy cập...');
+                const accessResponse = await checkExamAccess(eid, lateCode);
 
-                if (res.success) {
-                    const minutes = res.duration || 60;
-                    
-                    // --- BẮT ĐẦU TẢI ĐỀ THI SỚM (PRE-LOADING) ---
-                    msg.innerText = "Đang tải dữ liệu đề thi...";
-                    msg.style.color = "blue";
-                    
-                    try {
-                        // Gọi API lấy câu hỏi ngay lập tức
-                        const qResponse = await fetch(API_URL + `?action=getQuestions&examId=${eid}`);
-                        const qData = await qResponse.json();
-                        
-                        if (qData.success) {
-                            // Lưu thông tin vào Session
-                            const examData = {
-                                examId: res.examId || eid,
-                                title: res.title,
-                                duration: minutes,
-                                studentName: name,
-                                studentClass: sClass,
-                                questions: qData.data // Lưu luôn bộ câu hỏi
-                            };
-                            sessionStorage.setItem('currentExam', JSON.stringify(examData));
-                            
-                            // Chuyển trang vào thi ngay
-                            window.location.href = 'exam.html';
-                        } else {
-                            msg.innerText = "Lỗi: Không tải được câu hỏi.";
-                            msg.style.color = "red";
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        msg.innerText = "Mất kết nối khi tải đề.";
-                        msg.style.color = "red";
-                    }
-                } else {
-                    // Xử lý khi mã đề sai hoặc chưa đến giờ
-                    msg.innerText = res.message || "Mã đề không đúng.";
-                    msg.style.color = "red";
-                    
-                    if (res.status === "REQUIRE_CODE") {
-                        document.getElementById('late-section').style.display = 'block';
-                    }
+                if (!accessResponse.success) {
+                    handleAccessDenied(accessResponse);
+                    return;
                 }
-            } catch (err) {
-                console.error(err);
-                msg.innerText = "Lỗi kết nối server!";
-                msg.style.color = "red";
+
+                // Step 2: Load exam questions
+                showMessage('info', '<div class="spinner"></div> Đang tải đề thi...');
+                const questionsResponse = await getQuestions(eid);
+                
+                if (!questionsResponse.success) {
+                    showMessage('error', '❌ ' + (questionsResponse.message || 'Không thể tải câu hỏi.'));
+                    return;
+                }
+
+                // Step 3: Save exam data and redirect
+                saveExamData({
+                    examId: eid,
+                    title: accessResponse.title,
+                    duration: accessResponse.duration,
+                    studentName: name,
+                    studentClass: sClass,
+                    questions: questionsResponse.data
+                });
+
+                // Show success message briefly before redirect
+                showMessage('success', '✅ Đang chuyển vào phòng thi...');
+                
+                setTimeout(() => {
+                    window.location.href = 'exam.html';
+                }, 500);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('error', '❌ Lỗi kết nối máy chủ. Vui lòng thử lại.');
             } finally {
-                btn.disabled = false;
+                setLoading(false);
             }
         }
+
+        // =====================================================
+        // VALIDATION FUNCTIONS
+        // =====================================================
+        function validateInputs(name, sClass, eid) {
+            // Clear all error states
+            [elements.name, elements.class, elements.examId].forEach(el => {
+                el.classList.remove('error', 'success');
+            });
+
+            // Validate name
+            if (!name) {
+                showMessage('error', '⚠️ Vui lòng nhập họ và tên.');
+                elements.name.classList.add('error');
+                elements.name.focus();
+                return false;
+            }
+
+            if (name.length < 3) {
+                showMessage('error', '⚠️ Họ tên phải có ít nhất 3 ký tự.');
+                elements.name.classList.add('error');
+                elements.name.focus();
+                return false;
+            }
+
+            // Validate class
+            if (!sClass) {
+                showMessage('error', '⚠️ Vui lòng nhập lớp.');
+                elements.class.classList.add('error');
+                elements.class.focus();
+                return false;
+            }
+
+            if (sClass.length < 2) {
+                showMessage('error', '⚠️ Tên lớp không hợp lệ.');
+                elements.class.classList.add('error');
+                elements.class.focus();
+                return false;
+            }
+
+            // Validate exam ID
+            if (!eid) {
+                showMessage('error', '⚠️ Vui lòng nhập mã đề thi.');
+                elements.examId.classList.add('error');
+                elements.examId.focus();
+                return false;
+            }
+
+            if (!/^[A-Z0-9]+$/.test(eid)) {
+                showMessage('error', '⚠️ Mã đề chỉ gồm chữ IN HOA và số (VD: TOAN10).');
+                elements.examId.classList.add('error');
+                elements.examId.focus();
+                return false;
+            }
+
+            // Mark all as success
+            elements.name.classList.add('success');
+            elements.class.classList.add('success');
+            elements.examId.classList.add('success');
+
+            return true;
+        }
+
+        // =====================================================
+        // UI HELPER FUNCTIONS
+        // =====================================================
+        function showMessage(type, text) {
+            elements.msg.className = type;
+            elements.msg.innerHTML = text;
+        }
+
+        function clearMessage() {
+            elements.msg.className = '';
+            elements.msg.innerHTML = '';
+        }
+
+        function setLoading(isLoading) {
+            elements.btn.disabled = isLoading;
+            if (!isLoading) {
+                elements.btn.innerHTML = '🚀 Bắt đầu thi';
+            }
+        }
+
+        function handleAccessDenied(response) {
+            showMessage('error', '❌ ' + (response.message || 'Không thể truy cập đề thi.'));
+            
+            // Show late code input if required
+            if (response.status === "REQUIRE_CODE") {
+                elements.lateSection.style.display = 'block';
+                elements.lateCode.focus();
+            }
+        }
+
+        // =====================================================
+        // DATA STORAGE FUNCTIONS
+        // =====================================================
+        function saveExamData(data) {
+            sessionStorage.setItem('currentExam', JSON.stringify(data));
+        }
+
+        function loadSavedData() {
+            // Load last used student name and class
+            const savedName = localStorage.getItem('lastStudentName');
+            const savedClass = localStorage.getItem('lastStudentClass');
+            
+            if (savedName) {
+                elements.name.value = savedName;
+            }
+            
+            if (savedClass) {
+                elements.class.value = savedClass;
+            }
+        }
+
+        function setupAutoSave() {
+            // Auto-save student info when they blur
+            elements.name.addEventListener('blur', (e) => {
+                if (e.target.value.trim()) {
+                    localStorage.setItem('lastStudentName', e.target.value.trim());
+                }
+            });
+
+            elements.class.addEventListener('blur', (e) => {
+                if (e.target.value.trim()) {
+                    localStorage.setItem('lastStudentClass', e.target.value.trim());
+                }
+            });
+        }
+
+        // =====================================================
+        // KEYBOARD SHORTCUTS
+        // =====================================================
+        function setupKeyboardShortcuts() {
+            // Press Enter on any input to submit
+            document.querySelectorAll('input').forEach(input => {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        checkAndStart();
+                    }
+                });
+            });
+
+            // Auto-uppercase exam ID as user types
+            elements.examId.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase();
+            });
+        }
+
+        // =====================================================
+        // UTILITY: Clear validation on input
+        // =====================================================
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                input.classList.remove('error', 'success');
+                clearMessage();
+            });
+        });
     </script>
 </body>
 </html>
