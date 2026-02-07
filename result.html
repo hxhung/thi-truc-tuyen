@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết Quả Thi</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: #f0f2f5;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0;
+        }
+        .result-container {
+            background: white; width: 100%; max-width: 500px;
+            padding: 40px; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            animation: slideUp 0.5s ease;
+        }
+        /* Vòng tròn điểm số */
+        .score-circle {
+            width: 150px; height: 150px;
+            background: conic-gradient(#28a745 var(--percent), #e9ecef 0);
+            border-radius: 50%; margin: 20px auto;
+            display: flex; justify-content: center; align-items: center;
+            position: relative;
+        }
+        .score-circle::before {
+            content: ''; position: absolute;
+            width: 130px; height: 130px; background: white; border-radius: 50%;
+        }
+        .score-number {
+            position: relative; font-size: 3.5rem; font-weight: 800; color: #28a745;
+        }
+        
+        /* Chi tiết điểm */
+        .detail-box {
+            background: #f8f9fa; border-radius: 12px; padding: 20px;
+            margin: 30px 0; text-align: left;
+        }
+        .detail-row {
+            display: flex; justify-content: space-between;
+            padding: 10px 0; border-bottom: 1px dashed #dee2e6; font-size: 1.1rem;
+        }
+        .detail-row:last-child { border-bottom: none; }
+        
+        /* Nút bấm */
+        .btn-group { display: flex; gap: 15px; margin-top: 20px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-home { background: #6c757d; color: white; }
+        .btn-retry { background: #007bff; color: white; }
+        
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="result-container">
+        <h2 style="color: #333; margin-bottom: 5px;">KẾT QUẢ BÀI THI</h2>
+        <div style="color: #666;" id="student-name">Thí sinh: ---</div>
+
+        <div class="score-circle" id="score-circle" style="--percent: 0%">
+            <div class="score-number" id="final-score">0.0</div>
+        </div>
+        <div style="color: #888; margin-top: -10px; margin-bottom: 20px;">Điểm tổng kết (Thang 10)</div>
+
+        <div class="detail-box">
+            <div class="detail-row">
+                <span>📝 Trắc nghiệm</span>
+                <strong id="p1-score">0</strong>
+            </div>
+            <div class="detail-row">
+                <span>⚖️ Đúng/Sai</span>
+                <strong id="p2-score">0</strong>
+            </div>
+            <div class="detail-row">
+                <span>✍️ Điền số</span>
+                <strong id="p3-score">0</strong>
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn btn-home" onclick="window.location.href='index.html'">
+                <i class="fas fa-home"></i> Trang chủ
+            </button>
+            <button class="btn btn-retry" onclick="window.location.href='index.html'">
+                <i class="fas fa-redo"></i> Thi lại
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Lấy dữ liệu từ bộ nhớ trình duyệt
+        const resultData = JSON.parse(sessionStorage.getItem('examResult'));
+        const sessionData = JSON.parse(sessionStorage.getItem('currentExam')) || {};
+
+        if (resultData) {
+            // Hiển thị tên
+            document.getElementById('student-name').innerText = "Thí sinh: " + (resultData.studentName || "Bạn");
+            
+            // Hiển thị điểm tổng
+            const score = parseFloat(resultData.score || 0);
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('score-circle').style.setProperty('--percent', (score * 10) + '%');
+
+            // Hiển thị chi tiết
+            const details = resultData.details || {};
+            document.getElementById('p1-score').innerText = (details.p1 || 0) + ' điểm';
+            document.getElementById('p2-score').innerText = (details.p2 || 0) + ' điểm';
+            document.getElementById('p3-score').innerText = (details.p3 || 0) + ' điểm';
+        } else {
+            // Nếu không có kết quả thì quay về trang chủ
+            alert('Không tìm thấy kết quả!');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
