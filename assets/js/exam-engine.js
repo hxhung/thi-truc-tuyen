@@ -227,7 +227,7 @@ window.submitExam = async function(force = false) {
                 examId: result.examId,
                 studentName: sName,
                 score: result.score,
-                date: new Date().toISOString()
+                date: Date.now()
             });
 
             // Lưu kết quả để trang result.html hiển thị
