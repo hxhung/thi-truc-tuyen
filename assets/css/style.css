@@ -1,1 +1,234 @@
+/* =========================================
+   1. GLOBAL STYLES & VARIABLES
+   ========================================= */
+:root {
+    --primary: #007bff;
+    --primary-dark: #0056b3;
+    --secondary: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --light: #f8f9fa;
+    --dark: #343a40;
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
 
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    margin: 0;
+    padding-bottom: 80px; /* Chừa chỗ cho thanh footer */
+}
+
+/* =========================================
+   2. HEADER & TIMER
+   ========================================= */
+#header {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: white;
+    padding: 15px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 1000;
+    height: 60px;
+}
+
+#exam-title {
+    font-weight: bold; font-size: 1.1rem; color: var(--primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 70%;
+}
+
+#timer {
+    font-family: 'Courier New', monospace;
+    font-weight: bold; font-size: 1.2rem;
+    color: var(--danger);
+    background: #fff0f0; padding: 5px 10px; border-radius: 5px;
+}
+
+/* =========================================
+   3. EXAM CONTAINER & SECTIONS
+   ========================================= */
+#exam-container {
+    max-width: 800px;
+    margin: 80px auto 20px; /* Cách top 80px để tránh đè header */
+    padding: 0 15px;
+}
+
+.exam-section {
+    background: transparent;
+    margin-bottom: 30px;
+}
+
+.section-header {
+    background: var(--primary); color: white;
+    padding: 12px 20px;
+    border-radius: 8px 8px 0 0;
+    font-weight: bold; text-transform: uppercase;
+    font-size: 0.95rem; margin-bottom: 10px;
+}
+
+/* =========================================
+   4. QUESTION CARDS
+   ========================================= */
+.question-card {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    border-left: 5px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.question-card:hover { transform: translateY(-2px); }
+.question-card.answered { border-left-color: var(--success); }
+.question-card.flagged { border-left-color: var(--warning); }
+
+.question-text {
+    font-size: 1.05rem; margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.question-image {
+    max-width: 100%; height: auto;
+    display: block; margin: 10px auto;
+    border-radius: 5px; border: 1px solid #ddd;
+}
+
+/* =========================================
+   5. OPTIONS & INPUTS
+   ========================================= */
+/* --- Phần I: Trắc nghiệm ABCD --- */
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 2 cột */
+    gap: 12px;
+}
+
+.option-item {
+    display: flex; align-items: center;
+    padding: 10px; border: 1px solid #dee2e6;
+    border-radius: 6px; cursor: pointer;
+    transition: background 0.2s;
+}
+
+.option-item:hover { background-color: #e9ecef; }
+.option-item input { margin-right: 10px; transform: scale(1.2); }
+
+/* --- Phần II: Đúng/Sai (Table Style) --- */
+.tf-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px dashed #eee;
+}
+.tf-item:last-child { border-bottom: none; }
+
+.tf-content { flex: 1; padding-right: 15px; }
+
+.tf-options {
+    display: flex; gap: 15px;
+    min-width: 140px; justify-content: flex-end;
+}
+.tf-options label {
+    font-size: 0.9rem; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+}
+
+/* --- Phần III: Điền khuyết --- */
+.fill-input {
+    width: 100%; padding: 12px;
+    border: 2px solid #dfe1e5; border-radius: 6px;
+    font-size: 1rem; margin-top: 10px;
+    transition: border-color 0.2s;
+}
+.fill-input:focus {
+    border-color: var(--primary); outline: none;
+}
+
+/* =========================================
+   6. FOOTER & BUTTONS
+   ========================================= */
+#footer-controls {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; padding: 10px 20px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    display: flex; justify-content: flex-end; gap: 10px;
+    z-index: 1000;
+}
+
+.btn {
+    padding: 10px 20px; border: none; border-radius: 5px;
+    font-weight: bold; cursor: pointer; color: white;
+    font-size: 1rem;
+}
+
+.btn-submit { background-color: var(--success); }
+.btn-submit:hover { background-color: #218838; }
+.btn-submit:disabled { background-color: #94d3a2; cursor: not-allowed; }
+
+/* =========================================
+   7. RESULT MODAL (BẢNG ĐIỂM) - QUAN TRỌNG
+   ========================================= */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px); /* Làm mờ nền sau */
+    display: flex; justify-content: center; align-items: center;
+    z-index: 9999; animation: fadeIn 0.3s;
+}
+
+.result-card {
+    background: white; width: 90%; max-width: 400px;
+    border-radius: 16px; padding: 30px;
+    text-align: center;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.score-big {
+    font-size: 4.5rem; font-weight: 800;
+    color: var(--success);
+    margin: 5px 0; text-shadow: 2px 2px 0px rgba(40, 167, 69, 0.1);
+}
+
+.score-details {
+    background: #f8f9fa; padding: 15px;
+    border-radius: 12px; margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.detail-row {
+    display: flex; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.95rem; color: #555;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row strong { color: #333; }
+
+.btn-finish {
+    background: var(--primary); color: white;
+    padding: 14px; width: 100%;
+    border: none; border-radius: 10px;
+    font-weight: bold; font-size: 16px;
+    cursor: pointer; transition: transform 0.1s;
+}
+.btn-finish:hover { background: var(--primary-dark); transform: scale(1.02); }
+
+/* Animation */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* =========================================
+   8. RESPONSIVE (MOBILE)
+   ========================================= */
+@media (max-width: 600px) {
+    .options-grid { grid-template-columns: 1fr; } /* 1 cột trên mobile */
+    #timer { font-size: 1rem; }
+    #exam-title { font-size: 1rem; max-width: 60%; }
+    .tf-item { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .tf-options { width: 100%; justify-content: space-between; }
+}
