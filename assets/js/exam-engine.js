@@ -193,7 +193,7 @@ async function submitExam() {
     const payload = {
         examId: sessionData.examId,
         studentName: sessionData.studentName || 'Học sinh',
-        className: sessionData.className || '',
+        className: sessionData.studentClass || sessionData.className || '',
         answers: studentAnswers
     };
 
