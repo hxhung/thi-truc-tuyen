@@ -1,5 +1,6 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN FINAL (RENDER + TIMER + SUBMIT)
+ * EXAM ENGINE - PHIÊN BẢN HOÀN CHỈNH & ĐÃ SỬA LỖI
+ * Quản lý hiển thị câu hỏi, đếm giờ, lưu đáp án, nộp bài
  */
 
 let currentQuestions = [];
@@ -7,137 +8,108 @@ let studentAnswers = {};
 let examConfig = null;
 let sessionData = null;
 let timerInterval = null;
+let examStartTime = null;
+let timeLeft = 0; // Thời gian còn lại (giây)
 
-// --- 1. KHỞI TẠO ---
+// ===== 1. KHỞI TẠO KHI TRANG LOAD =====
 document.addEventListener('DOMContentLoaded', () => {
-    loadConfig().then(() => {
-        loadExamData();
-        injectLoadingStyles();
-    });
+    loadConfigAndStart();
 });
 
-async function loadConfig() {
+async function loadConfigAndStart() {
     try {
         const response = await fetch('config.json');
         examConfig = await response.json();
+        console.log("✅ Config loaded:", examConfig);
     } catch (error) {
-        console.error("Không đọc được config.json");
+        console.error("❌ Lỗi tải config:", error);
+        alert('Lỗi tải cấu hình hệ thống!');
+        return;
     }
-}
 
-// --- 2. HÀM TẢI VÀ HIỂN THỊ DỮ LIỆU (QUAN TRỌNG NHẤT) ---
-async function loadExamData() {
-    // Lấy dữ liệu từ index.html đã lưu
-    const sessionRaw = sessionStorage.getItem('currentExam');
+    // Tải dữ liệu đề thi từ sessionStorage
+    sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
     
-    if (!sessionRaw) {
-        alert('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
+    if (!sessionData || !sessionData.questions) {
+        alert('Không tìm thấy dữ liệu đề thi. Vui lòng quay lại trang chủ.');
         window.location.href = 'index.html';
         return;
     }
 
-    sessionData = JSON.parse(sessionRaw);
+    // Khởi tạo dữ liệu
+    currentQuestions = sessionData.questions;
+    examStartTime = new Date();
+    timeLeft = (sessionData.duration || 45) * 60; // Chuyển phút sang giây
+
+    // Hiển thị giao diện
+    renderExamHeader();
+    renderAllQuestions();
+    startTimer();
+}
+
+// ===== 2. HIỂN THỊ HEADER & TIMER =====
+function renderExamHeader() {
+    document.getElementById('exam-title').textContent = sessionData.title || 'BÀI THI TRỰC TUYẾN';
+}
+
+function startTimer() {
+    updateTimerDisplay();
     
-    // 1. Hiển thị tiêu đề và Tên
-    document.getElementById('exam-title').innerText = (sessionData.title || "BÀI THI") + " - " + sessionData.examId;
-    
-    // 2. Lấy danh sách câu hỏi
-    if (sessionData.questions && sessionData.questions.length > 0) {
-        currentQuestions = sessionData.questions;
-        
-        // GỌI HÀM VẼ GIAO DIỆN (Phần bạn còn thiếu)
-        renderExamInterface(currentQuestions);
-        
-        // BẮT ĐẦU ĐẾM NGƯỢC
-        startTimer(sessionData.duration);
-    } else {
-        document.getElementById('exam-container').innerHTML = `<h3 style="text-align:center; color:red">Không có dữ liệu câu hỏi!</h3>`;
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        // Cảnh báo khi còn 5 phút
+        if (timeLeft === 300) {
+            alert('⚠️ Còn 5 phút nữa hết giờ!');
+        }
+
+        // Hết giờ tự động nộp bài
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert('⏰ Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.');
+            submitExam(true); // Force submit
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    document.getElementById('timer').textContent = display;
+
+    // Đổi màu khi còn dưới 5 phút
+    if (timeLeft < 300) {
+        document.getElementById('timer').style.color = '#dc3545';
+        document.getElementById('timer').style.animation = 'blink 1s infinite';
     }
 }
 
-// --- 3. HÀM VẼ GIAO DIỆN CÂU HỎI ---
-function renderExamInterface(questions) {
+// ===== 3. RENDER CÂU HỎI =====
+function renderAllQuestions() {
     const container = document.getElementById('exam-container');
-    container.innerHTML = ''; // Xóa chữ "Đang tải..."
+    container.innerHTML = ''; // Xóa nội dung cũ
 
-    // Phân loại câu hỏi
-    const p1 = questions.filter(q => q.type === 'MULTIPLE_CHOICE');
-    const p2 = questions.filter(q => q.type === 'TRUE_FALSE');
-    const p3 = questions.filter(q => q.type === 'FILL_IN');
+    // Phân loại câu hỏi theo type
+    const part1 = currentQuestions.filter(q => q.type === 'MULTIPLE_CHOICE');
+    const part2 = currentQuestions.filter(q => q.type === 'TRUE_FALSE');
+    const part3 = currentQuestions.filter(q => q.type === 'FILL_IN');
 
-    // --- VẼ PHẦN I: TRẮC NGHIỆM ---
-    if (p1.length > 0) {
-        let html = `<div class="section-header">PHẦN I: TRẮC NGHIỆM KHÁCH QUAN</div>`;
-        p1.forEach((q, index) => {
-            html += `
-            <div class="question-card">
-                <div class="q-stem"><strong>Câu ${index + 1}:</strong> ${renderMath(q.contentSub || q.contentRoot)}</div>
-                ${q.image ? `<img src="${q.image}" style="max-width:100%; margin-bottom:10px">` : ''}
-                <div class="options-grid">
-                    ${['A', 'B', 'C', 'D'].map(opt => `
-                        <label class="option-label" style="display:flex; align-items:center; gap:5px; padding:8px; border:1px solid #ddd; border-radius:5px; cursor:pointer">
-                            <input type="radio" name="q_${q.id}" value="${opt}" onchange="saveAnswer(${q.rowIndex}, '${opt}')">
-                            <span><b>${opt}.</b> ${q.options[opt] || ''}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            </div>`;
-        });
-        container.innerHTML += html;
+    // Render từng phần
+    if (part1.length > 0) {
+        container.innerHTML += renderPart1(part1);
+    }
+    if (part2.length > 0) {
+        container.innerHTML += renderPart2(part2);
+    }
+    if (part3.length > 0) {
+        container.innerHTML += renderPart3(part3);
     }
 
-    // --- VẼ PHẦN II: ĐÚNG SAI (NHÓM THEO CÂU DẪN) ---
-    if (p2.length > 0) {
-        let html = `<div class="section-header">PHẦN II: TRẮC NGHIỆM ĐÚNG SAI</div>`;
-        
-        // Nhóm các câu hỏi theo contentRoot (Câu dẫn chung)
-        const groups = {};
-        p2.forEach(q => {
-            const root = q.contentRoot || "Câu hỏi chung";
-            if (!groups[root]) groups[root] = [];
-            groups[root].push(q);
-        });
-
-        let gIndex = 1;
-        for (const [rootText, items] of Object.entries(groups)) {
-            html += `
-            <div class="question-group">
-                <div class="q-stem"><strong>Câu ${gIndex}:</strong> ${renderMath(rootText)}</div>
-                ${items.map((q, i) => `
-                    <div class="sub-question-row">
-                        <div class="sub-text">
-                             <strong>${String.fromCharCode(97 + i)})</strong> ${renderMath(q.contentSub)}
-                        </div>
-                        <div class="tf-options">
-                            <label><input type="radio" name="q_${q.id}" value="T" onchange="saveAnswer(${q.rowIndex}, 'T')"> Đúng</label>
-                            <label><input type="radio" name="q_${q.id}" value="F" onchange="saveAnswer(${q.rowIndex}, 'F')"> Sai</label>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>`;
-            gIndex++;
-        }
-        container.innerHTML += html;
-    }
-
-    // --- VẼ PHẦN III: ĐIỀN SỐ ---
-    if (p3.length > 0) {
-        let html = `<div class="section-header">PHẦN III: TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
-        p3.forEach((q, index) => {
-            html += `
-            <div class="question-card">
-                <div class="q-stem"><strong>Câu ${index + 1}:</strong> ${renderMath(q.contentSub || q.contentRoot)}</div>
-                ${q.image ? `<img src="${q.image}" style="max-width:100%">` : ''}
-                <input type="text" class="fill-input" placeholder="Nhập đáp án của bạn..." 
-                    onchange="saveAnswer(${q.rowIndex}, this.value)">
-            </div>`;
-        });
-        container.innerHTML += html;
-    }
-
-    // Render công thức toán (nếu có dùng Katex)
+    // Render KaTeX sau khi DOM đã được tạo
     if (window.renderMathInElement) {
-        renderMathInElement(container, {
+        renderMathInElement(document.body, {
             delimiters: [
                 {left: "$$", right: "$$", display: true},
                 {left: "$", right: "$", display: false}
@@ -146,123 +118,240 @@ function renderExamInterface(questions) {
     }
 }
 
-// Hàm hỗ trợ render text (đơn giản)
-function renderMath(text) {
-    if (!text) return "";
-    return text.replace(/\n/g, "<br>");
+// ===== PHẦN I: TRẮC NGHIỆM ABCD =====
+function renderPart1(questions) {
+    let html = '<div class="section-header">PHẦN I: TRẮC NGHIỆM (3 điểm)</div>';
+    
+    questions.forEach((q, index) => {
+        html += `
+        <div class="question-card" data-id="${q.id}">
+            <div class="question-text">
+                <strong>Câu ${index + 1}:</strong> ${q.contentSub || q.contentRoot}
+            </div>
+            ${q.image ? `<img src="${q.image}" class="question-image" alt="Hình câu ${index+1}">` : ''}
+            <div class="options-grid">
+                ${renderOptions(q.id, q.options)}
+            </div>
+        </div>`;
+    });
+    
+    return html;
 }
 
-// --- 4. LOGIC LƯU ĐÁP ÁN ---
-window.saveAnswer = function(rowIndex, value) {
-    studentAnswers[rowIndex] = value;
-    // Có thể lưu vào sessionStorage để F5 không mất bài (Tuỳ chọn)
-    sessionStorage.setItem('studentAnswers', JSON.stringify(studentAnswers));
+function renderOptions(questionId, options) {
+    let html = '';
+    ['A', 'B', 'C', 'D'].forEach(key => {
+        if (options[key]) {
+            html += `
+            <label class="option-item">
+                <input type="radio" name="q${questionId}" value="${key}" 
+                       onchange="saveAnswer(${questionId}, '${key}', 'MULTIPLE_CHOICE')">
+                <span><strong>${key}.</strong> ${options[key]}</span>
+            </label>`;
+        }
+    });
+    return html;
+}
+
+// ===== PHẦN II: ĐÚNG/SAI =====
+function renderPart2(questions) {
+    let html = '<div class="section-header">PHẦN II: ĐÚNG/SAI (4 điểm)</div>';
+    
+    // Nhóm câu hỏi theo contentRoot
+    const groups = groupByContentRoot(questions);
+    
+    groups.forEach((group, groupIndex) => {
+        html += `<div class="question-card">`;
+        
+        // Hiển thị đề bài chung
+        if (group.root) {
+            html += `<div class="root-title">${group.root}</div>`;
+        }
+        
+        // Hiển thị các câu con a, b, c, d
+        group.items.forEach((q, subIndex) => {
+            const label = String.fromCharCode(97 + subIndex); // a, b, c, d
+            html += `
+            <div class="tf-row">
+                <div class="tf-content">
+                    <strong>${label})</strong> ${q.contentSub}
+                </div>
+                <div class="tf-options">
+                    <label>
+                        <input type="radio" name="q${q.id}" value="TRUE" 
+                               onchange="saveAnswer(${q.id}, 'TRUE', 'TRUE_FALSE')">
+                        <span>Đúng</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="q${q.id}" value="FALSE" 
+                               onchange="saveAnswer(${q.id}, 'FALSE', 'TRUE_FALSE')">
+                        <span>Sai</span>
+                    </label>
+                </div>
+            </div>`;
+        });
+        
+        html += `</div>`;
+    });
+    
+    return html;
+}
+
+function groupByContentRoot(questions) {
+    const grouped = {};
+    questions.forEach(q => {
+        const key = q.contentRoot || 'default';
+        if (!grouped[key]) {
+            grouped[key] = { root: q.contentRoot, items: [] };
+        }
+        grouped[key].items.push(q);
+    });
+    return Object.values(grouped);
+}
+
+// ===== PHẦN III: ĐIỀN SỐ =====
+function renderPart3(questions) {
+    let html = '<div class="section-header">PHẦN III: ĐIỀN KHUYẾT (3 điểm)</div>';
+    
+    questions.forEach((q, index) => {
+        html += `
+        <div class="question-card">
+            <div class="question-text">
+                <strong>Câu ${index + 1}:</strong> ${q.contentSub || q.contentRoot}
+            </div>
+            ${q.image ? `<img src="${q.image}" class="question-image" alt="Hình câu ${index+1}">` : ''}
+            <input type="text" 
+                   class="fill-input" 
+                   placeholder="Nhập đáp án (số hoặc chữ)" 
+                   oninput="saveAnswer(${q.id}, this.value, 'FILL_IN')">
+        </div>`;
+    });
+    
+    return html;
+}
+
+// ===== 4. LƯU ĐÁP ÁN =====
+window.saveAnswer = function(questionId, answer, type) {
+    studentAnswers[questionId] = answer;
+    
+    // Đánh dấu câu đã trả lời
+    const card = document.querySelector(`[data-id="${questionId}"]`);
+    if (card) {
+        card.classList.add('answered');
+    }
+    
+    console.log(`✅ Đã lưu: Câu ${questionId} = ${answer}`);
 };
 
-// --- 5. LOGIC ĐỒNG HỒ ĐẾM NGƯỢC ---
-function startTimer(durationMinutes) {
-    let timeLeft = durationMinutes * 60;
-    const timerElement = document.getElementById('timer');
-    
-    // Cập nhật ngay lập tức
-    updateTimerDisplay(timeLeft, timerElement);
-
-    timerInterval = setInterval(() => {
-        timeLeft--;
-        updateTimerDisplay(timeLeft, timerElement);
-
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            alert("Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.");
-            submitExam(true); // Force submit
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay(seconds, element) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    element.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    
-    // Đổi màu khi sắp hết giờ
-    if (seconds < 300) element.style.color = "red";
-}
-
-// --- 6. HÀM NỘP BÀI (ĐÃ SỬA CHUẨN TỪ CODE TRƯỚC CỦA BẠN) ---
+// ===== 5. NỘP BÀI =====
 window.submitExam = async function(force = false) {
-    if (!force && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
+    // Xác nhận
+    if (!force) {
+        const confirmed = confirm('Bạn có chắc chắn muốn nộp bài?');
+        if (!confirmed) return;
+    }
 
-    // 1. Hiện Loading
-    const overlay = document.createElement('div');
-    overlay.id = 'loading-overlay';
-    overlay.innerHTML = `<div class="spinner"></div><div class="loading-msg">Đang chấm điểm...</div>`;
-    document.body.appendChild(overlay);
+    // Dừng đồng hồ
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+
+    // Hiển thị màn hình chờ
+    showLoadingOverlay();
 
     try {
-        const sName = sessionData.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
-        const sClass = localStorage.getItem('lastStudentClass') || "";
+        // Lấy thông tin thí sinh
+        const studentName = sessionData.studentName || localStorage.getItem('lastStudentName') || 'Học sinh';
+        const studentClass = sessionData.studentClass || localStorage.getItem('lastStudentClass') || '';
 
-        const payload = JSON.stringify({
+        // Chuẩn bị dữ liệu
+        const payload = {
             examId: sessionData.examId,
-            studentName: sName,
-            studentClass: sClass,
-            answers: studentAnswers,
-            startTime: sessionData.startTime,
-            submitTime: new Date().toISOString()
-        });
+            studentName: studentName,
+            studentClass: studentClass,
+            answers: studentAnswers
+        };
 
-        const response = await fetch(examConfig.api_endpoint, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: payload
-        });
+        console.log("📤 Đang gửi:", payload);
 
-        const result = await response.json();
+        // Gọi API
+        const result = await submitExam(payload);
+
+        console.log("📥 Nhận về:", result);
 
         if (result.success) {
             // Lưu lịch sử
             saveToHistory({
-                testName: sessionData.title || result.examId,
+                timestamp: new Date().toISOString(),
+                testName: sessionData.title || sessionData.examId,
                 examId: result.examId,
-                studentName: sName,
-                score: result.score,
-                date: Date.now()
+                studentName: studentName,
+                score: parseFloat(result.score),
+                correctAnswers: 0 // Backend không trả về, tạm để 0
             });
 
-            // Lưu kết quả để trang result.html hiển thị
-            result.studentName = sName;
-            result.studentClass = sClass;
-            sessionStorage.setItem('examResult', JSON.stringify(result));
+            // Lưu kết quả để hiển thị trang result.html
+            const resultData = {
+                success: true,
+                examId: result.examId,
+                studentName: studentName,
+                studentClass: studentClass,
+                score: result.score,
+                details: result.details || { p1: 0, p2: 0, p3: 0 }
+            };
 
-            // Dọn dẹp và chuyển trang
+            sessionStorage.setItem('examResult', JSON.stringify(resultData));
+
+            // Dọn dẹp
             sessionStorage.removeItem('currentExam');
-            localStorage.removeItem('exam_progress');
+
+            // Chuyển trang
             window.location.href = 'result.html';
         } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Lỗi không xác định');
         }
 
     } catch (error) {
-        if(document.getElementById('loading-overlay')) document.getElementById('loading-overlay').remove();
-        alert("Lỗi nộp bài: " + error.message);
+        hideLoadingOverlay();
+        alert('❌ Lỗi nộp bài: ' + error.message);
+        console.error(error);
     }
 };
 
-function injectLoadingStyles() {
-    const style = document.createElement('style');
-    style.innerHTML = `
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 99999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+// ===== 6. LOADING OVERLAY =====
+function showLoadingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-overlay';
+    overlay.innerHTML = `
+        <div class="spinner"></div>
+        <div class="loading-msg">Đang chấm điểm... Vui lòng đợi!</div>
     `;
-    document.head.appendChild(style);
+    document.body.appendChild(overlay);
 }
 
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+// ===== 7. LƯU LỊCH SỬ =====
 function saveToHistory(record) {
     try {
         const oldData = JSON.parse(localStorage.getItem('exam_results') || '[]');
         oldData.push(record);
         localStorage.setItem('exam_results', JSON.stringify(oldData));
-    } catch (e) {}
+        console.log('✅ Đã lưu lịch sử:', record);
+    } catch (e) {
+        console.error('❌ Lỗi lưu lịch sử:', e);
+    }
 }
+
+// ===== 8. XỬ LÝ KHI RỜI KHỎI TRANG =====
+window.addEventListener('beforeunload', (e) => {
+    if (timerInterval) {
+        e.preventDefault();
+        e.returnValue = 'Bạn chưa nộp bài. Rời khỏi trang sẽ mất dữ liệu!';
+    }
+});
