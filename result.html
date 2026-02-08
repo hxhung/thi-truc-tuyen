@@ -5,55 +5,218 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết Quả Thi</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .result-card { background: white; width: 90%; max-width: 450px; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .score-circle { width: 140px; height: 140px; background: #28a745; border-radius: 50%; margin: 20px auto; display: flex; justify-content: center; align-items: center; color: white; font-size: 3.5rem; font-weight: bold; border: 5px solid #d4edda; }
-        .detail-box { background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 30px 0; text-align: left; }
-        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed #ddd; }
-        .btn { display: block; width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn:hover { background: #0056b3; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 20px;
+        }
+        .result-card { 
+            background: white; 
+            width: 90%; 
+            max-width: 450px; 
+            padding: 40px; 
+            border-radius: 20px; 
+            text-align: center; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h2 {
+            color: #333;
+            margin: 0 0 10px 0;
+            font-size: 1.8rem;
+        }
+        .student-info {
+            color: #666;
+            margin: 10px 0 30px 0;
+            font-size: 1rem;
+        }
+        .score-circle { 
+            width: 140px; 
+            height: 140px; 
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-radius: 50%; 
+            margin: 20px auto; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            color: white; 
+            font-size: 3rem; 
+            font-weight: bold; 
+            border: 5px solid #d4edda;
+            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+        }
+        .detail-box { 
+            background: #f8f9fa; 
+            border-radius: 10px; 
+            padding: 20px; 
+            margin: 30px 0; 
+            text-align: left; 
+        }
+        .detail-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 10px 0; 
+            border-bottom: 1px dashed #ddd;
+            align-items: center;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            color: #555;
+            font-size: 0.95rem;
+        }
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.05rem;
+        }
+        .btn { 
+            display: block; 
+            width: 100%; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+        }
+        .btn:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #5a6268);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        .error-msg {
+            color: #dc3545;
+            padding: 20px;
+            background: #fff5f5;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
     <div class="result-card">
-        <h2 style="color:#333; margin:0">KẾT QUẢ BÀI THI</h2>
-        <p id="student-info" style="color:#666; margin-top:10px">...</p>
+        <h2>🎯 KẾT QUẢ BÀI THI</h2>
+        <div class="student-info" id="student-info">Đang tải...</div>
         
         <div class="score-circle" id="final-score">0.0</div>
         
         <div class="detail-box">
-            <div class="detail-row"><span>📝 Trắc nghiệm:</span><strong id="p1">0</strong></div>
-            <div class="detail-row"><span>⚖️ Đúng/Sai:</span><strong id="p2">0</strong></div>
-            <div class="detail-row" style="border:none"><span>✍️ Điền số:</span><strong id="p3">0</strong></div>
+            <div class="detail-row">
+                <span class="detail-label">📝 Trắc nghiệm:</span>
+                <strong class="detail-value" id="p1">0 điểm</strong>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">⚖️ Đúng/Sai:</span>
+                <strong class="detail-value" id="p2">0 điểm</strong>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">✏️ Điền số:</span>
+                <strong class="detail-value" id="p3">0 điểm</strong>
+            </div>
         </div>
 
-        <button class="btn" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/index.html'">VỀ TRANG CHỦ</button>
+        <button class="btn" onclick="window.location.href='index.html'">
+            🏠 Về TRANG CHỦ
+        </button>
+        <button class="btn btn-secondary" onclick="window.location.href='statistics.html'">
+            📊 Xem Thống Kê
+        </button>
     </div>
 
     <script>
-        // Tự động chạy khi mở trang
-        const raw = sessionStorage.getItem('examResult');
-        if (!raw) {
-            alert('Không tìm thấy kết quả!');
-            window.location.href = 'index.html';
-        } else {
-            const data = JSON.parse(raw);
-            
-            // 1. HIỂN THỊ TÊN (Ưu tiên lấy từ data Backend trả về, nếu không thì lấy từ localStorage)
-            const name = data.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
-            const sClass = data.studentClass || localStorage.getItem('lastStudentClass') || "";
-            document.getElementById('student-info').innerText = `${name} - ${sClass}`;
+        // ===== LOAD KẾT QUẢ KHI TRANG MỞ =====
+        document.addEventListener('DOMContentLoaded', () => {
+            loadResult();
+        });
 
-            // 2. HIỂN THỊ ĐIỂM TỔNG
-            document.getElementById('final-score').innerText = parseFloat(data.score || 0).toFixed(2);
+        function loadResult() {
+            try {
+                const raw = sessionStorage.getItem('examResult');
+                
+                if (!raw) {
+                    showError('Không tìm thấy kết quả thi. Vui lòng làm bài lại.');
+                    return;
+                }
 
-            // 3. HIỂN THỊ ĐIỂM CHI TIẾT (Xử lý nếu Backend chưa gửi details)
-            const d = data.details || {};
-            document.getElementById('p1').innerText = (d.p1 || 0) + ' điểm';
-            document.getElementById('p2').innerText = (d.p2 || 0) + ' điểm';
-            document.getElementById('p3').innerText = (d.p3 || 0) + ' điểm';
+                const data = JSON.parse(raw);
+                console.log('📊 Dữ liệu kết quả:', data);
+
+                // Kiểm tra cấu trúc dữ liệu
+                if (!data.success) {
+                    showError(data.message || 'Có lỗi xảy ra khi chấm bài.');
+                    return;
+                }
+
+                // 1. HIỂN THỊ THÔNG TIN THÍ SINH
+                const name = data.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
+                const sClass = data.studentClass || localStorage.getItem('lastStudentClass') || "";
+                document.getElementById('student-info').textContent = `${name}${sClass ? ' - ' + sClass : ''}`;
+
+                // 2. HIỂN THỊ ĐIỂM TỔNG
+                const totalScore = parseFloat(data.score || 0);
+                document.getElementById('final-score').textContent = totalScore.toFixed(1);
+
+                // Đổi màu theo điểm
+                const scoreCircle = document.getElementById('final-score');
+                if (totalScore >= 8) {
+                    scoreCircle.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
+                } else if (totalScore >= 6.5) {
+                    scoreCircle.style.background = 'linear-gradient(135deg, #007bff, #0056b3)';
+                } else if (totalScore >= 5) {
+                    scoreCircle.style.background = 'linear-gradient(135deg, #ffc107, #ff9800)';
+                } else {
+                    scoreCircle.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                }
+
+                // 3. HIỂN THỊ ĐIỂM CHI TIẾT
+                const details = data.details || {};
+                
+                const p1Score = parseFloat(details.p1 || 0);
+                const p2Score = parseFloat(details.p2 || 0);
+                const p3Score = parseFloat(details.p3 || 0);
+
+                document.getElementById('p1').textContent = p1Score.toFixed(2) + ' điểm';
+                document.getElementById('p2').textContent = p2Score.toFixed(2) + ' điểm';
+                document.getElementById('p3').textContent = p3Score.toFixed(2) + ' điểm';
+
+                // 4. XÓA DỮ LIỆU KẾT QUẢ KHỎI SESSION (tránh xem lại nhiều lần)
+                // sessionStorage.removeItem('examResult'); // Tùy chọn
+
+            } catch (error) {
+                console.error('❌ Lỗi load kết quả:', error);
+                showError('Lỗi hiển thị kết quả: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            const card = document.querySelector('.result-card');
+            card.innerHTML = `
+                <h2 style="color: #dc3545;">❌ LỖI</h2>
+                <div class="error-msg">${message}</div>
+                <button class="btn" onclick="window.location.href='index.html'">
+                    🏠 Về TRANG CHỦ
+                </button>
+            `;
         }
     </script>
 </body>
 </html>
-

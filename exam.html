@@ -5,213 +5,315 @@
     <title>Làm Bài Thi</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
+    <!-- KaTeX for Math Rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
-        /* --- 1. CSS GỐC (GIỮ NGUYÊN GIAO DIỆN CŨ) --- */
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f5f7fa; margin: 0; color: #333; }
+        /* ===== GLOBAL STYLES ===== */
+        * { box-sizing: border-box; }
         
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #f5f7fa; 
+            margin: 0; 
+            color: #333; 
+            padding-bottom: 80px;
+        }
+        
+        /* ===== HEADER & TIMER ===== */
         #header {
-            position: sticky; top: 0; z-index: 1000;
-            background: white; padding: 15px 20px;
+            position: sticky; 
+            top: 0; 
+            z-index: 1000;
+            background: white; 
+            padding: 15px 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
         }
-        #exam-title { font-weight: bold; font-size: 18px; color: #0056b3; }
-        #timer { font-weight: bold; font-size: 18px; color: #d9534f; background: #fff5f5; padding: 5px 15px; border-radius: 20px; border: 1px solid #d9534f; }
-
-        #exam-container { max-width: 850px; margin: 20px auto; padding-bottom: 80px; }
-
-        /* Khung từng phần (Section) */
-        .exam-section {
-            background: white; border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            margin-bottom: 25px; overflow: hidden;
+        
+        #exam-title { 
+            font-weight: bold; 
+            font-size: 18px; 
+            color: #0056b3; 
         }
+        
+        #timer { 
+            font-weight: bold; 
+            font-size: 18px; 
+            color: #d9534f; 
+            background: #fff5f5; 
+            padding: 5px 15px; 
+            border-radius: 20px; 
+            border: 1px solid #d9534f; 
+        }
+
+        /* ===== EXAM CONTAINER ===== */
+        #exam-container { 
+            max-width: 850px; 
+            margin: 20px auto; 
+            padding: 0 15px;
+        }
+
+        /* ===== SECTION HEADER ===== */
         .section-header {
-            background: #e9ecef; padding: 12px 20px;
-            font-weight: bold; color: #495057; border-bottom: 2px solid #007bff;
+            background: #007bff;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 25px 0 15px 0;
+            border-radius: 8px;
+            text-transform: uppercase;
         }
 
-        /* Khung từng câu hỏi */
-        .question-item { padding: 20px; border-bottom: 1px solid #eee; }
-        .question-item:last-child { border-bottom: none; }
-        
-        .q-content { margin-bottom: 15px; font-size: 16px; line-height: 1.5; }
-        .q-image img { max-width: 100%; height: auto; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-
-        /* Trắc nghiệm ABCD */
-        .options-list { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .option-label {
-            display: flex; align-items: center; cursor: pointer;
-            padding: 10px; border: 1px solid #dee2e6; border-radius: 5px; transition: 0.2s;
+        /* ===== QUESTION CARDS ===== */
+        .question-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            padding: 20px;
+            transition: transform 0.2s;
         }
-        .option-label:hover { background-color: #f8f9fa; border-color: #007bff; }
-        .option-label input { margin-right: 10px; width: 18px; height: 18px; }
 
-        /* --- 2. CSS SỬA LẠI PHẦN ĐÚNG/SAI (CHO ĐẸP & THẲNG HÀNG) --- */
+        .question-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .question-card.answered {
+            border-left: 4px solid #28a745;
+        }
+
+        .question-text { 
+            margin-bottom: 15px; 
+            font-size: 16px; 
+            line-height: 1.5; 
+        }
+
+        .question-image {
+            max-width: 100%; 
+            height: auto; 
+            margin: 10px 0; 
+            border: 1px solid #ddd; 
+            border-radius: 5px;
+            display: block;
+        }
+
+        /* ===== PART I: MULTIPLE CHOICE ===== */
+        .options-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 12px; 
+        }
+
+        .option-item {
+            display: flex; 
+            align-items: center; 
+            cursor: pointer;
+            padding: 10px; 
+            border: 1px solid #dee2e6; 
+            border-radius: 5px; 
+            transition: 0.2s;
+        }
+
+        .option-item:hover { 
+            background-color: #f8f9fa; 
+            border-color: #007bff; 
+        }
+
+        .option-item input { 
+            margin-right: 10px; 
+            width: 18px; 
+            height: 18px; 
+        }
+
+        /* ===== PART II: TRUE/FALSE ===== */
         .root-title {
-            padding: 15px 20px; background: #fff;
-            color: #000; font-style: italic; /* Không in đậm, màu đen */
-            border-left: 4px solid #6c757d; margin-bottom: 0;
+            padding: 12px 15px; 
+            background: #f8f9fa;
+            color: #333; 
+            font-style: italic;
+            border-left: 4px solid #6c757d; 
+            margin-bottom: 15px;
+            border-radius: 4px;
         }
-        /* Dòng câu hỏi a,b,c,d */
+
         .tf-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 0; border-top: 1px dashed #eee;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 12px 0; 
+            border-top: 1px dashed #eee;
         }
-        .tf-row:first-child { border-top: none; }
-        .tf-content { flex: 1; padding-right: 15px; }
-        .tf-options { display: flex; gap: 20px; min-width: 140px; justify-content: flex-end; }
-        .tf-options label { display: flex; align-items: center; cursor: pointer; font-weight: 500; }
-        .tf-options input { margin-right: 5px; transform: scale(1.2); }
 
-        /* --- 3. CSS MỚI: MODAL KẾT QUẢ --- */
-        #result-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.75); z-index: 9999;
-            display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px); animation: fadeIn 0.3s;
+        .tf-row:first-child { 
+            border-top: none; 
         }
-        .modal-content {
-            background: white; width: 90%; max-width: 420px;
-            padding: 30px; border-radius: 20px; text-align: center;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3); animation: slideUp 0.4s;
+
+        .tf-content { 
+            flex: 1; 
+            padding-right: 15px; 
         }
-        .score-gradient {
-            font-size: 56px; font-weight: 800; margin: 15px 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+
+        .tf-options { 
+            display: flex; 
+            gap: 20px; 
+            min-width: 140px; 
+            justify-content: flex-end; 
         }
+
+        .tf-options label { 
+            display: flex; 
+            align-items: center; 
+            cursor: pointer; 
+            font-weight: 500; 
+        }
+
+        .tf-options input { 
+            margin-right: 5px; 
+            transform: scale(1.2); 
+        }
+
+        /* ===== PART III: FILL IN ===== */
+        .fill-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dfe1e5;
+            border-radius: 6px;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: border-color 0.2s;
+        }
+
+        .fill-input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        /* ===== FOOTER SUBMIT BUTTON ===== */
+        #footer-controls {
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%; 
+            background: white; 
+            padding: 12px; 
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1); 
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .btn-submit {
+            background: #28a745; 
+            color: white; 
+            padding: 12px 50px; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-submit:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        /* ===== LOADING OVERLAY ===== */
+        #loading-overlay {
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            z-index: 9999;
+            display: flex; 
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;
+        }
+
         .spinner {
-            width: 40px; height: 40px; border: 4px solid #f3f3f3;
-            border-top: 4px solid #6a11cb; border-radius: 50%;
-            margin: 0 auto 20px; animation: spin 1s linear infinite;
+            width: 60px; 
+            height: 60px;
+            border: 6px solid #f3f3f3; 
+            border-top: 6px solid #007bff;
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin-bottom: 20px;
         }
-        .btn-retry, .btn-home {
-            padding: 10px 25px; border-radius: 50px; border: none;
-            font-weight: bold; cursor: pointer; margin: 5px; font-size: 15px;
-        }
-        .btn-retry { background: #e9ecef; color: #333; }
-        .btn-home { background: #007bff; color: white; }
 
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        /* Mobile Responsive */
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+
+        .loading-msg { 
+            font-size: 18px; 
+            font-weight: bold; 
+            color: #333; 
+        }
+
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 600px) {
-            .options-list { grid-template-columns: 1fr; }
-            .tf-row { flex-direction: column; align-items: flex-start; }
-            .tf-options { margin-top: 8px; width: 100%; justify-content: flex-start; gap: 30px; }
+            .options-grid { 
+                grid-template-columns: 1fr; 
+            }
+            
+            .tf-row { 
+                flex-direction: column; 
+                align-items: flex-start; 
+            }
+            
+            .tf-options { 
+                margin-top: 8px; 
+                width: 100%; 
+                justify-content: flex-start; 
+                gap: 30px; 
+            }
+
+            #timer { 
+                font-size: 16px; 
+            }
+
+            #exam-title { 
+                font-size: 16px; 
+            }
         }
-		/* --- SECTION STYLES --- */
-.section-header {
-    background-color: #007bff;
-    color: white;
-    padding: 10px 15px;
-    font-size: 18px;
-    font-weight: bold;
-    margin-top: 30px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    text-transform: uppercase;
-}
-
-/* --- PART II: GROUPED QUESTIONS --- */
-.question-group {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.q-stem {
-    font-size: 16px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
-}
-
-.sub-question-row {
-    display: flex;
-    justify-content: space-between; /* Đẩy text sang trái, nút sang phải */
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px dashed #f0f0f0;
-}
-
-.sub-text {
-    flex: 1; /* Chiếm hết khoảng trống */
-    margin-right: 20px;
-}
-
-.tf-options {
-    display: flex;
-    gap: 15px;
-    min-width: 150px; /* Đảm bảo nút không bị co lại */
-}
-
-.tf-btn {
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-/* --- PART I & III: CARDS --- */
-.question-card {
-    background: white;
-    padding: 20px;
-    margin-bottom: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.options-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 2 cột cho đáp án ABCD */
-    gap: 10px;
-    margin-top: 10px;
-}
-@media (max-width: 600px) {
-    .options-grid { grid-template-columns: 1fr; } /* Mobile hiện 1 cột */
-    .sub-question-row { flex-direction: column; align-items: flex-start; }
-    .tf-options { margin-top: 5px; width: 100%; justify-content: space-around; }
-}
-
-.fill-input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    margin-top: 10px;
-}
     </style>
 </head>
 <body>
 
+    <!-- HEADER -->
     <div id="header">
         <div id="exam-title">ĐANG TẢI ĐỀ...</div>
         <div id="timer">--:--</div>
     </div>
 
+    <!-- EXAM CONTAINER -->
     <div id="exam-container">
-        </div>
-
-    <div style="position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); text-align: center;">
-        <button onclick="submitExam()" style="background: #28a745; color: white; padding: 12px 50px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer;">NỘP BÀI</button>
+        <!-- Questions will be rendered here by JavaScript -->
     </div>
 
-    <div id="result-modal-overlay">
-        <div class="modal-content" id="modal-body">
-            </div>
+    <!-- FOOTER SUBMIT -->
+    <div id="footer-controls">
+        <button class="btn-submit" onclick="submitExam()">NỘP BÀI</button>
     </div>
 
-    <script src="config.json"></script>
+    <!-- ===== IMPORT SCRIPTS (ĐÚNG THỨ TỰ) ===== -->
+    <script src="assets/js/api-connector.js"></script>
     <script src="assets/js/exam-engine.js"></script>
 </body>
 </html>
