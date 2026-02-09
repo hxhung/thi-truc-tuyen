@@ -19,13 +19,23 @@ window.initExam = function (data) {
     if (!data) return;
     sessionData = data;
     
-    // Lấy toàn bộ câu hỏi từ nguồn (Sheet)
+   // 1. Lấy toàn bộ câu hỏi từ nguồn
     const allQuestions = data.questions || [];
     
-    // 🔥 FIX: Lọc câu hỏi theo đúng Mã đề (examId) của phiên thi này
-    currentQuestions = allQuestions.filter(q => 
-        String(q.examId || q.MaDe || "") === String(sessionData.examId)
-    );
+    // 2. 🔥 FIX: Lọc câu hỏi (Phần này bạn đang thiếu)
+    // Code này chấp nhận cả ExamID (hoa) và examId (thường)
+    currentQuestions = allQuestions.filter(q => {
+        const qId = q.ExamID || q.examId || q.MaDe || ""; 
+        return String(qId).trim() === String(sessionData.examId).trim();
+    });
+
+    // 3. Kiểm tra kết quả sau khi lọc (Đoạn if bạn hỏi)
+    if (currentQuestions.length === 0) {
+        console.error("Dữ liệu gốc:", allQuestions); // Log ra để kiểm tra nếu lỗi
+        alert(`❌ Lỗi: Không tìm thấy câu hỏi cho mã đề "${sessionData.examId}"!\n\n(Kiểm tra lại cột ExamID trong file CSV)`);
+        setTimeout(() => window.location.href = 'index.html', 2000);
+        return; // Dừng lại, không chạy tiếp các lệnh bên dưới
+    }
     
     // --- LOGIC TIMER ---
     const now = Date.now();
@@ -210,41 +220,48 @@ async function processSubmitExam(force = false) {
 
     submitted = true;
     clearInterval(timerInterval);
+    clearInterval(autosaveInterval); // ✅ Dừng autosave khi nộp bài
 
     const overlay = document.createElement('div');
     overlay.id = 'loading-overlay';
-    overlay.innerHTML = '<div class="spinner"></div><p>Đang nộp bài...</p>';
+    overlay.innerHTML = '<div class="spinner"></div><p class="loading-msg">Đang nộp bài...</p>';
     document.body.appendChild(overlay);
 
     try {
-        // Gọi API nộp bài lên Google Script
-        const result = await google.script.run
-            .withFailureHandler(err => { throw err; })
-            .submitExamAPI({
-                examId: sessionData.examId,
-                studentName: sessionData.studentName,
-                studentClass: sessionData.studentClass,
-                answers: studentAnswers,
-                usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
-            });
+        // ✅ ĐÚNG - Dùng submitExam() từ api-connector.js
+        const result = await submitExam({
+            examId: sessionData.examId,
+            studentName: sessionData.studentName,
+            studentClass: sessionData.studentClass,
+            answers: studentAnswers,
+            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
+        });
 
         if (result.success) {
+            // Xóa autosave sau khi nộp thành công
             localStorage.removeItem(`autosave_${sessionData.examId}`);
+            
+            // Lưu kết quả vào sessionStorage
             sessionStorage.setItem('examResult', JSON.stringify(result));
-            location.href = 'result.html';
+            
+            // Chuyển sang trang kết quả
+            window.location.href = 'result.html';
         } else {
-            alert('Lỗi: ' + result.message);
+            // Xử lý lỗi từ backend
+            alert('❌ Lỗi: ' + (result.message || 'Không thể nộp bài'));
             submitted = false;
             document.getElementById('loading-overlay').remove();
         }
-    } catch (e) {
-        alert('❌ Lỗi nộp bài: ' + e.message);
+    } catch (error) {
+        console.error('Submit error:', error);
+        alert('❌ Lỗi kết nối: ' + error.message + '\n\nĐáp án đã được lưu tự động. Vui lòng thử lại.');
         submitted = false;
         document.getElementById('loading-overlay').remove();
     }
 }
 
-window.submitExam = () => processSubmitExam(false);
+// Đổi tên thành finishExam để tránh trùng với hàm submitExam của API
+window.finishExam = () => processSubmitExam(false);
 
 document.addEventListener('DOMContentLoaded', () => {
     const rawData = sessionStorage.getItem('currentExam');
