@@ -1,5 +1,5 @@
 /**
- * EXAM ENGINE – FINAL VERSION
+ * EXAM ENGINE – PHIÊN BẢN CẬP NHẬT MÃ ĐỀ (examId)
  */
 
 let currentQuestions = [];
@@ -9,19 +9,25 @@ let timerInterval = null;
 let autosaveInterval = null;
 
 const AUTOSAVE_INTERVAL = 15000; 
-const AUTOSAVE_MAX_AGE = 30 * 60 * 1000; 
-
 let timeLeft = 0;
 let submitted = false;
 
 /* =====================================================
-   1. KHỞI TẠO & KHÔI PHỤC
+   1. KHỞI TẠO & LỌC DỮ LIỆU THEO MÃ ĐỀ
    ===================================================== */
 window.initExam = function (data) {
     if (!data) return;
     sessionData = data;
-    currentQuestions = data.questions || [];
     
+    // Lấy toàn bộ câu hỏi từ nguồn (Sheet)
+    const allQuestions = data.questions || [];
+    
+    // 🔥 FIX: Lọc câu hỏi theo đúng Mã đề (examId) của phiên thi này
+    currentQuestions = allQuestions.filter(q => 
+        String(q.examId || q.MaDe || "") === String(sessionData.examId)
+    );
+    
+    // --- LOGIC TIMER ---
     const now = Date.now();
     const startToken = parseInt(sessionData.startToken) || now;
     const elapsedSeconds = Math.floor((now - startToken) / 1000);
@@ -36,13 +42,12 @@ window.initExam = function (data) {
         return;
     }
 
+    // Khôi phục đáp án đã lưu (nếu có)
     const raw = localStorage.getItem(`autosave_${sessionData.examId}`);
     if (raw) {
         try {
             const saved = JSON.parse(raw);
-            if (saved.examId === sessionData.examId) {
-                studentAnswers = saved.answers || {};
-            }
+            studentAnswers = saved.answers || {};
         } catch (e) { console.error("Restore error:", e); }
     }
     
@@ -60,46 +65,32 @@ window.initExam = function (data) {
 function syncAnswersToUI() {
     Object.keys(studentAnswers).forEach(qId => {
         const val = studentAnswers[qId];
-        // Tìm cả radio của Part 1 và Part 2
         const radio = document.querySelector(`input[name="q${qId}"][value="${val}"]`) || 
                       document.querySelector(`input[name="${qId}"][value="${val}"]`);
         if (radio) radio.checked = true;
-        
-        // Điền lại input cho Part 3
         const input = document.querySelector(`input[data-qid="${qId}"]`);
         if (input) input.value = val;
     });
 }
 
 /* =====================================================
-   2. HÀM RENDER CHUẨN HÓA
+   2. RENDER GIAO DIỆN (PHẦN I, II, III)
    ===================================================== */
-function renderExam(rawQuestions) {
+function renderExam(questions) {
     const container = document.getElementById('exam-container');
     if (!container) return;
 
-    if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
-        container.innerHTML = '<div style="text-align:center; padding:20px; color:red;">⚠️ Không có dữ liệu câu hỏi</div>';
-        return;
-    }
-
-    // Chuẩn hóa Part và ID
-    const questions = rawQuestions.map((q, idx) => {
-        let rawPart = q.part ?? q.Part ?? q.Phan ?? 1;
-        let rawId = q.id ?? q.ID ?? `auto_${idx}`;
-        return { ...q, id: String(rawId), part: Number(rawPart) };
-    });
-
-    const p1 = questions.filter(q => q.part === 1);
-    const p2 = questions.filter(q => q.part === 2);
-    const p3 = questions.filter(q => q.part === 3);
+    // Phân loại Part
+    const p1 = questions.filter(q => Number(q.part) === 1);
+    const p2 = questions.filter(q => Number(q.part) === 2);
+    const p3 = questions.filter(q => Number(q.part) === 3);
 
     container.innerHTML = '';
     if (p1.length) container.innerHTML += renderPart1(p1);
     if (p2.length) container.innerHTML += renderPart2(p2);
     if (p3.length) container.innerHTML += renderPart3(p3);
 
-    // Render KaTeX sau khi HTML đã được nạp
+    // Render công thức Toán KaTeX
     if (window.renderMathInElement) {
         renderMathInElement(container, {
             delimiters: [
@@ -112,40 +103,35 @@ function renderExam(rawQuestions) {
 }
 
 function renderPart1(questions) {
-    let html = `<div class="section-header">PHẦN I. Câu trắc nghiệm nhiều phương án lựa chọn.</div>`;
-    html += questions.map((q, i) => `
+    return `<div class="section-header">PHẦN I. Trắc nghiệm nhiều lựa chọn</div>` + 
+    questions.map((q, i) => `
     <div class="question-card">
         <div class="question-text"><b>Câu ${i + 1}.</b> ${q.contentRoot || q.questionText || ""}</div>
         ${q.image ? `<img src="${q.image}" class="question-image">` : ''}
         <div class="options-grid">
-            ${['A', 'B', 'C', 'D'].map(opt => {
-                const optText = q.options ? q.options[opt] : (q['option' + opt] || "");
-                return `
+            ${['A', 'B', 'C', 'D'].map(opt => `
                 <label class="option-item">
                     <input type="radio" name="${q.id}" value="${opt}" onchange="saveAnswer('${q.id}', '${opt}')">
-                    <span><b>${opt}.</b> ${optText}</span>
-                </label>`;
-            }).join('')}
+                    <span><b>${opt}.</b> ${q['option' + opt] || q.options?.[opt] || ""}</span>
+                </label>`).join('')}
         </div>
     </div>`).join('');
-    return html;
 }
 
 function renderPart2(questions) {
     if (!questions.length) return '';
-    let html = `<div class="section-header">PHẦN II. Câu trắc nghiệm đúng sai.</div>`;
+    let html = `<div class="section-header">PHẦN II. Trắc nghiệm Đúng - Sai (Gồm 4 câu)</div>`;
     
     const chunkSize = 4;
     for (let i = 0; i < questions.length; i += chunkSize) {
         const group = questions.slice(i, i + chunkSize);
         const groupIndex = Math.floor(i / chunkSize) + 1;
         const firstItem = group[0];
-        const rootText = firstItem.contentRoot || "Chọn Đúng hoặc Sai cho mỗi mệnh đề:";
 
         html += `
         <div class="question-card">
-            <div class="question-text" style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                <b style="color:var(--primary);">Câu ${groupIndex}.</b> ${rootText}
+            <div class="question-text" style="border-bottom: 1px solid #eee; padding-bottom:10px; margin-bottom:15px;">
+                <b style="color:var(--primary);">Câu ${groupIndex}.</b> ${firstItem.contentRoot || "Chọn Đúng hoặc Sai cho mỗi mệnh đề:"}
                 ${firstItem.image ? `<div style="margin-top:10px;"><img src="${firstItem.image}" class="question-image"></div>` : ''}
             </div>
             <div class="tf-container">
@@ -174,20 +160,19 @@ function renderPart2(questions) {
 }
 
 function renderPart3(questions) {
-    let html = `<div class="section-header">PHẦN III. Câu trắc nghiệm trả lời ngắn.</div>`;
-    html += questions.map((q, i) => `
+    return `<div class="section-header">PHẦN III. Trắc nghiệm trả lời ngắn</div>` + 
+    questions.map((q, i) => `
     <div class="question-card">
         <div class="question-text"><b>Câu ${i + 1}.</b> ${q.contentRoot || q.questionText || ""}</div>
         ${q.image ? `<img src="${q.image}" class="question-image">` : ''}
         <input type="text" class="fill-input" data-qid="${q.id}" 
-               placeholder="Nhập đáp án..." 
+               placeholder="Nhập đáp án của bạn..." 
                oninput="saveAnswer('${q.id}', this.value)">
     </div>`).join('');
-    return html;
 }
 
 /* =====================================================
-   3. LOGIC HỆ THỐNG
+   3. HỆ THỐNG ĐIỀU KHIỂN
    ===================================================== */
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
@@ -201,7 +186,7 @@ function startTimer() {
         }
         const m = Math.floor(timeLeft / 60);
         const s = timeLeft % 60;
-        if (timerDisplay) timerDisplay.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        if (timerDisplay) timerDisplay.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }, 1000);
 }
 
@@ -221,19 +206,18 @@ function doAutosave() {
 
 async function processSubmitExam(force = false) {
     if (submitted) return;
-    if (!force && !confirm('Bạn muốn nộp bài?')) return;
+    if (!force && !confirm('Bạn chắc chắn muốn nộp bài?')) return;
 
     submitted = true;
     clearInterval(timerInterval);
-    clearInterval(autosaveInterval);
 
-    // Hiển thị overlay chờ
-    const div = document.createElement('div');
-    div.id = 'loading-overlay';
-    div.innerHTML = '<div class="spinner"></div><p>Đang nộp bài...</p>';
-    document.body.appendChild(div);
+    const overlay = document.createElement('div');
+    overlay.id = 'loading-overlay';
+    overlay.innerHTML = '<div class="spinner"></div><p>Đang nộp bài...</p>';
+    document.body.appendChild(overlay);
 
     try {
+        // Gọi API nộp bài lên Google Script
         const result = await google.script.run
             .withFailureHandler(err => { throw err; })
             .submitExamAPI({
@@ -247,21 +231,22 @@ async function processSubmitExam(force = false) {
         if (result.success) {
             localStorage.removeItem(`autosave_${sessionData.examId}`);
             sessionStorage.setItem('examResult', JSON.stringify(result));
-            location.href = result.redirectUrl || 'result.html';
+            location.href = 'result.html';
         } else {
-            alert("Lỗi: " + result.message);
+            alert('Lỗi: ' + result.message);
             submitted = false;
+            document.getElementById('loading-overlay').remove();
         }
     } catch (e) {
-        alert("Lỗi nộp bài: " + e.message);
-        document.getElementById('loading-overlay')?.remove();
+        alert('❌ Lỗi nộp bài: ' + e.message);
         submitted = false;
+        document.getElementById('loading-overlay').remove();
     }
 }
 
 window.submitExam = () => processSubmitExam(false);
 
 document.addEventListener('DOMContentLoaded', () => {
-    const raw = sessionStorage.getItem('currentExam');
-    if (raw) window.initExam(JSON.parse(raw));
+    const rawData = sessionStorage.getItem('currentExam');
+    if (rawData) window.initExam(JSON.parse(rawData));
 });
