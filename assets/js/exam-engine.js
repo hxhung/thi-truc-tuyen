@@ -178,20 +178,58 @@ function renderPart1(questions) {
 }
 
 function renderPart2(questions) {
-    // Group câu hỏi True/False nếu cần, hoặc render lẻ
-    // Ở đây render lẻ theo logic gốc đơn giản hóa
-    return `<div class="section-header">Phần II: Trắc nghiệm Đúng/Sai</div>` + 
-    questions.map((q, i) => `
-    <div class="question-card">
-        ${i === 0 || q.contentRoot !== questions[i-1].contentRoot ? `<div class="root-title">${q.contentRoot}</div>` : ''}
-        <div class="tf-row">
-            <div class="tf-content"><b>Ý ${i + 1}.</b> ${q.contentSub || q.questionText || ""}</div>
-            <div class="tf-options">
-                <label><input type="radio" name="${q.id || q.rowIndex}" value="T" onchange="saveAnswer('${q.id || q.rowIndex}', 'TRUE')"> Đ</label>
-                <label><input type="radio" name="${q.id || q.rowIndex}" value="F" onchange="saveAnswer('${q.id || q.rowIndex}', 'FALSE')"> S</label>
+    if (!questions || questions.length === 0) return '';
+
+    // 1. NHÓM CÁC CÂU THEO ĐỀ BÀI CHUNG (contentRoot)
+    const groups = {};
+    questions.forEach(q => {
+        const root = q.contentRoot || "Câu hỏi trắc nghiệm Đúng/Sai";
+        if (!groups[root]) groups[root] = [];
+        groups[root].push(q);
+    });
+
+    let html = `<div class="section-header">PHẦN II. Câu trắc nghiệm đúng sai. Thí sinh trả lời từ câu 1 đến câu 4. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.</div>`;
+    let groupCount = 1;
+
+    // 2. DUYỆT QUA TỪNG CỤM ĐỀ BÀI
+    for (const [rootText, items] of Object.entries(groups)) {
+        html += `
+        <div class="question-card">
+            <div class="question-text">
+                <b>Câu ${groupCount}.</b> ${rootText}
             </div>
-        </div>
-    </div>`).join('');
+            <div class="tf-container" style="margin-top: 15px;">
+                ${items.map((item, i) => {
+                    const label = String.fromCharCode(97 + i); // a, b, c, d
+                    
+                    // KEY ĐỘC NHẤT = ID DÒNG TRONG SHEET
+                    // Đảm bảo 1 ý = 1 key, không bị ghi đè, Backend chấm đúng dòng.
+                    const answerKey = item.id; 
+
+                    return `
+                    <div class="tf-row" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px dashed #eee;">
+                        <div class="tf-content" style="flex: 1; padding-right: 15px;">
+                            <b>${label})</b> ${item.contentSub || item.questionText || ''}
+                        </div>
+                        <div class="tf-options" style="display: flex; gap: 20px; min-width: 120px; justify-content: flex-end;">
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="q${answerKey}" value="T" 
+                                    onchange="saveAnswer('${answerKey}', 'T')"> 
+                                <span style="font-weight: bold; color: #28a745;">Đ</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <input type="radio" name="q${answerKey}" value="F" 
+                                    onchange="saveAnswer('${answerKey}', 'F')"> 
+                                <span style="font-weight: bold; color: #dc3545;">S</span>
+                            </label>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+        groupCount++;
+    }
+    return html;
 }
 
 function renderPart3(questions) {
