@@ -40,7 +40,6 @@ async function loadConfigAndStart() {
     currentQuestions = sessionData.questions;
     examStartTime = new Date();
     timeLeft = (sessionData.duration || 45) * 60; // Chuyển phút sang giây
-	studentAnswers = JSON.parse(localStorage.getItem('draft_answers') || '{}');
 
     // Hiển thị giao diện
     renderExamHeader();
@@ -55,25 +54,24 @@ function renderExamHeader() {
 
 function startTimer() {
     updateTimerDisplay();
-
+    
     timerInterval = setInterval(() => {
-        if (timeLeft <= 0) {
-            timeLeft = 0;
-            updateTimerDisplay();
-            clearInterval(timerInterval);
-            handleSubmitExam(true);
-            return;
-        }
-
         timeLeft--;
         updateTimerDisplay();
 
+        // Cảnh báo khi còn 5 phút
         if (timeLeft === 300) {
-            alert('⚠️ Còn 5 phút!');
+            alert('⚠️ Còn 5 phút nữa hết giờ!');
+        }
+
+        // Hết giờ tự động nộp bài
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert('⏰ Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.');
+            submitExam(true); // Force submit
         }
     }, 1000);
 }
-
 
 function updateTimerDisplay() {
     const minutes = Math.floor(timeLeft / 60);
@@ -118,7 +116,6 @@ function renderAllQuestions() {
             ]
         });
     }
-	restoreDraftAnswers(); // PATCH 5: khôi phục đáp án nháp
 }
 
 // ===== PHẦN I: TRẮC NGHIỆM ABCD =====
@@ -159,47 +156,47 @@ function renderOptions(questionId, options) {
 // ===== PHẦN II: ĐÚNG/SAI =====
 function renderPart2(questions) {
     let html = '<div class="section-header">PHẦN II: ĐÚNG/SAI (4 điểm)</div>';
-
+    
+    // Nhóm câu hỏi theo contentRoot
     const groups = groupByContentRoot(questions);
-
-    groups.forEach(group => {
+    
+    groups.forEach((group, groupIndex) => {
         html += `<div class="question-card">`;
-
+        
+        // Hiển thị đề bài chung
         if (group.root) {
             html += `<div class="root-title">${group.root}</div>`;
         }
-
-        // FIX: giữ thứ tự a,b,c,d
-        group.items.sort((a, b) => a.id - b.id);
-
-        group.items.forEach((q, i) => {
-            const label = String.fromCharCode(97 + i);
+        
+        // Hiển thị các câu con a, b, c, d
+        group.items.forEach((q, subIndex) => {
+            const label = String.fromCharCode(97 + subIndex); // a, b, c, d
             html += `
-            <div class="tf-row" data-id="${q.id}">
+            <div class="tf-row">
                 <div class="tf-content">
                     <strong>${label})</strong> ${q.contentSub}
                 </div>
                 <div class="tf-options">
                     <label>
-                        <input type="radio" name="q${q.id}" value="TRUE"
-                               onchange="saveAnswer(${q.id}, 'TRUE', 'TRUE_FALSE')"> Đúng
+                        <input type="radio" name="q${q.id}" value="TRUE" 
+                               onchange="saveAnswer(${q.id}, 'TRUE', 'TRUE_FALSE')">
+                        <span>Đúng</span>
                     </label>
                     <label>
-                        <input type="radio" name="q${q.id}" value="FALSE"
-                               onchange="saveAnswer(${q.id}, 'FALSE', 'TRUE_FALSE')"> Sai
+                        <input type="radio" name="q${q.id}" value="FALSE" 
+                               onchange="saveAnswer(${q.id}, 'FALSE', 'TRUE_FALSE')">
+                        <span>Sai</span>
                     </label>
                 </div>
             </div>`;
         });
-
+        
         html += `</div>`;
     });
-
+    
     return html;
 }
 
-        
-        
 function groupByContentRoot(questions) {
     const grouped = {};
     questions.forEach(q => {
@@ -215,38 +212,36 @@ function groupByContentRoot(questions) {
 // ===== PHẦN III: ĐIỀN SỐ =====
 function renderPart3(questions) {
     let html = '<div class="section-header">PHẦN III: ĐIỀN KHUYẾT (3 điểm)</div>';
-
+    
     questions.forEach((q, index) => {
         html += `
-        <div class="question-card" data-id="${q.id}">
+        <div class="question-card">
             <div class="question-text">
                 <strong>Câu ${index + 1}:</strong> ${q.contentSub || q.contentRoot}
             </div>
-            ${q.image ? `<img src="${q.image}" class="question-image">` : ''}
-            <input type="text"
-                   class="fill-input"
-                   placeholder="Nhập đáp án"
-                   oninput="saveAnswer(${q.id}, this.value.trim(), 'FILL_IN')">
+            ${q.image ? `<img src="${q.image}" class="question-image" alt="Hình câu ${index+1}">` : ''}
+            <input type="text" 
+                   class="fill-input" 
+                   placeholder="Nhập đáp án (số hoặc chữ)" 
+                   oninput="saveAnswer(${q.id}, this.value, 'FILL_IN')">
         </div>`;
     });
-
+    
     return html;
 }
 
-
 // ===== 4. LƯU ĐÁP ÁN =====
-window.saveAnswer = function(questionId, answer) {
+window.saveAnswer = function(questionId, answer, type) {
     studentAnswers[questionId] = answer;
-
-    // Đánh dấu câu đã làm
+    
+    // Đánh dấu câu đã trả lời
     const card = document.querySelector(`[data-id="${questionId}"]`);
-    if (card) card.classList.add('answered');
-
-    // PATCH 5: lưu nháp realtime
-    localStorage.setItem('draft_answers', JSON.stringify(studentAnswers));
+    if (card) {
+        card.classList.add('answered');
+    }
+    
+    console.log(`✅ Đã lưu: Câu ${questionId} = ${answer}`);
 };
-
-
 
 // ===== 5. NỘP BÀI =====
 window.submitExam = async function(force = false) {
@@ -280,7 +275,8 @@ window.submitExam = async function(force = false) {
         console.log("📤 Đang gửi:", payload);
 
         // Gọi API
-        const result = await submitExamAPI(payload);
+        const result = await submitExam(payload);
+
         console.log("📥 Nhận về:", result);
 
         if (result.success) {
@@ -305,8 +301,6 @@ window.submitExam = async function(force = false) {
             };
 
             sessionStorage.setItem('examResult', JSON.stringify(resultData));
-			// PATCH 5: dọn nháp
-			localStorage.removeItem('draft_answers');
 
             // Dọn dẹp
             sessionStorage.removeItem('currentExam');
