@@ -1,6 +1,6 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN ĐỒNG BỘ DATA & FIX TRUE/FALSE
- * Khớp hoàn toàn với Config.csv và Code.js hiện tại
+ * EXAM ENGINE - PHIÊN BẢN FIX LOADING & TIMER
+ * Đã bổ sung EventListener để kích hoạt chạy
  */
 
 let currentQuestions = [];
@@ -14,6 +14,7 @@ let submitted = false;
 // 1. KHỞI TẠO & XỬ LÝ DỮ LIỆU
 // =====================================================
 window.initExam = function (data) {
+    console.log("Đang khởi tạo bài thi với dữ liệu:", data); // Log để debug
     if (!data) return;
     sessionData = data;
     
@@ -24,12 +25,13 @@ window.initExam = function (data) {
     let lastContentRoot = "";
     
     currentQuestions = allQuestions.filter(q => {
+        // Lấy ID từ cột ExamID (CSV) hoặc examId (JSON)
         const qId = q.ExamID || q.examId || q.MaDe || ""; 
         return String(qId).trim().toLowerCase() === String(sessionData.examId).trim().toLowerCase();
     }).map(q => {
         // Fix lỗi CSV: Nếu dòng dưới khuyết Content_Root thì lấy của dòng trên
         if (q.Type === "TRUE_FALSE") {
-            if (q.Content_Root && q.Content_Root.trim() !== "") {
+            if (q.Content_Root && String(q.Content_Root).trim() !== "") {
                 lastContentRoot = q.Content_Root;
             } else {
                 q.Content_Root = lastContentRoot;
@@ -38,9 +40,11 @@ window.initExam = function (data) {
         return q;
     });
 
+    console.log("Số câu hỏi sau khi lọc:", currentQuestions.length);
+
     // Kiểm tra dữ liệu
     if (currentQuestions.length === 0) {
-        alert(`❌ Lỗi: Không tìm thấy câu hỏi cho mã đề "${sessionData.examId}"!\n(Đã nhận data nhưng lọc ra 0 kết quả)`);
+        alert(`❌ Lỗi: Không tìm thấy câu hỏi cho mã đề "${sessionData.examId}"!\n(Server trả về ${allQuestions.length} dòng, nhưng không dòng nào khớp mã đề)`);
         setTimeout(() => window.location.href = 'index.html', 3000);
         return;
     }
@@ -59,8 +63,11 @@ window.initExam = function (data) {
         return;
     }
 
-    // 3. Hiển thị thông tin
-    document.getElementById('exam-title').innerText = `Đề thi: ${sessionData.title || sessionData.examId}`;
+    // 3. Hiển thị thông tin header
+    const titleEl = document.getElementById('exam-title');
+    if (titleEl) titleEl.innerText = `Đề thi: ${sessionData.title || sessionData.examId}`;
+    
+    // 4. Bắt đầu chạy
     startTimer();
     renderQuestions();
     
@@ -69,10 +76,11 @@ window.initExam = function (data) {
 };
 
 // =====================================================
-// 2. RENDER GIAO DIỆN (QUAN TRỌNG NHẤT)
+// 2. RENDER GIAO DIỆN
 // =====================================================
 function renderQuestions() {
     const container = document.getElementById('exam-container');
+    if (!container) return;
     container.innerHTML = '';
 
     // --- PHẦN 1: TRẮC NGHIỆM (MULTIPLE_CHOICE) ---
@@ -80,12 +88,11 @@ function renderQuestions() {
     if (p1.length > 0) {
         container.innerHTML += `<div class="part-title">PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN (${p1.length} câu)</div>`;
         p1.forEach((q, index) => {
-            const qIndex = currentQuestions.indexOf(q); // Index thực tế trong mảng gốc
+            const qIndex = currentQuestions.indexOf(q); 
             container.innerHTML += `
                 <div class="question-card" id="q-${qIndex}">
                     <div class="question-header">
                         <span class="question-number">Câu ${index + 1}</span>
-                        <span>(ID: ${q.ExamID})</span>
                     </div>
                     <div class="question-content">
                         ${q.Content_Root || ''}
@@ -102,7 +109,6 @@ function renderQuestions() {
     }
 
     // --- PHẦN 2: ĐÚNG SAI (TRUE_FALSE) ---
-    // Cần gom nhóm các câu hỏi cùng Content_Root
     const p2Raw = currentQuestions.filter(q => q.Type === 'TRUE_FALSE');
     if (p2Raw.length > 0) {
         const groups = {};
@@ -161,7 +167,7 @@ function renderQuestions() {
         });
     }
     
-    // Render công thức Toán (nếu có KaTeX)
+    // Render công thức Toán (KaTeX)
     if (window.renderMathInElement) {
         renderMathInElement(container, {
             delimiters: [
@@ -172,7 +178,6 @@ function renderQuestions() {
     }
 }
 
-// Helper: Render nút chọn A, B, C, D
 function renderOption(qIdx, label, content) {
     if (!content) return '';
     return `
@@ -192,21 +197,22 @@ window.saveAnswer = function(qIndex, value) {
 };
 
 function autoSave() {
-    if (submitted) return;
+    if (submitted || !sessionData) return;
     localStorage.setItem(`autosave_${sessionData.examId}`, JSON.stringify(studentAnswers));
 }
 
 function startTimer() {
     const timerEl = document.getElementById('timer');
+    if (!timerEl) return;
+
+    // Cập nhật ngay lập tức để không bị delay 1s
+    updateTimerDisplay(timerEl);
+
     timerInterval = setInterval(() => {
         timeLeft--;
+        updateTimerDisplay(timerEl);
         
-        const m = Math.floor(timeLeft / 60);
-        const s = timeLeft % 60;
-        timerEl.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-        
-        // Cảnh báo khi còn 5 phút
-        if (timeLeft === 300) timerEl.style.color = 'red';
+        if (timeLeft === 300) timerEl.style.color = 'red'; // Cảnh báo còn 5 phút
 
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
@@ -216,27 +222,32 @@ function startTimer() {
     }, 1000);
 }
 
+function updateTimerDisplay(el) {
+    if (timeLeft < 0) timeLeft = 0;
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+}
+
 // =====================================================
-// 4. NỘP BÀI (Đã đổi tên hàm để tránh xung đột)
+// 4. NỘP BÀI
 // =====================================================
 window.finishExam = async function() {
     if (submitted) return;
-    if (!confirm('Bạn có chắc chắn muốn nộp bài?')) return;
+    if (timeLeft > 0 && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
 
     submitted = true;
-    clearInterval(timerInterval);
+    if (timerInterval) clearInterval(timerInterval);
     
-    // Hiển thị loading
     const btn = document.querySelector('.btn-submit');
     if(btn) { btn.disabled = true; btn.innerText = 'Đang nộp...'; }
 
     try {
-        // Gọi hàm submitExam từ api-connector.js
         const result = await submitExam({
             examId: sessionData.examId,
             studentName: sessionData.studentName,
             studentClass: sessionData.studentClass,
-            answers: studentAnswers, // Object { "0": "A", "1": "B"... }
+            answers: studentAnswers,
             usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
         });
 
@@ -245,7 +256,7 @@ window.finishExam = async function() {
             sessionStorage.setItem('examResult', JSON.stringify(result));
             window.location.href = 'result.html';
         } else {
-            alert('❌ Lỗi server: ' + result.message);
+            alert('❌ Lỗi server: ' + (result.message || 'Không xác định'));
             submitted = false;
             if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
         }
@@ -255,3 +266,37 @@ window.finishExam = async function() {
         if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
     }
 };
+
+// =====================================================
+// 🔥 QUAN TRỌNG: KÍCH HOẠT KHI TRANG LOAD XONG 🔥
+// =====================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Lấy dữ liệu từ sessionStorage (Do trang index.html lưu vào)
+    const rawData = sessionStorage.getItem('currentExam');
+    
+    if (!rawData) {
+        alert('Bạn chưa đăng nhập! Vui lòng quay lại trang chủ.');
+        window.location.href = 'index.html';
+        return;
+    }
+
+    try {
+        const data = JSON.parse(rawData);
+        
+        // 2. Kiểm tra nếu có autosave cũ thì khôi phục (Tùy chọn)
+        const savedAns = localStorage.getItem(`autosave_${data.examId}`);
+        if (savedAns) {
+            studentAnswers = JSON.parse(savedAns);
+            // Lưu ý: Việc tích chọn lại UI (radio button) sẽ phức tạp hơn, 
+            // ở mức cơ bản ta chỉ load vào biến để nộp bài không bị mất.
+        }
+
+        // 3. CHẠY ENGINE
+        initExam(data);
+
+    } catch (e) {
+        console.error("Lỗi parse dữ liệu thi:", e);
+        alert("Dữ liệu thi bị lỗi. Vui lòng đăng nhập lại.");
+        window.location.href = 'index.html';
+    }
+});
