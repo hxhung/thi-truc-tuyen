@@ -1,40 +1,43 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN HOÀN CHỈNH & ĐÃ FIX AUTOSAVE
- * Quản lý hiển thị câu hỏi, đếm giờ, lưu đáp án, nộp bài
+ * EXAM ENGINE – FIX STABLE (COMPAT 1.8)
+ * - Không reset thời gian khi reload
+ * - Không alert trong timer
+ * - Autosave an toàn
+ * - Giữ nguyên renderPart1/2/3
  */
 
 /* ================== BIẾN GỐC ================== */
 let currentQuestions = [];
 let studentAnswers = {};
-let examConfig = null;
 let sessionData = null;
 let timerInterval = null;
-let examStartTime = null;
-let timeLeft = 0; // giây
-
-/* ================== AUTOSAVE (ADD-ON AN TOÀN) ================== */
-const AUTOSAVE_INTERVAL = 15000;        // 15s
-const AUTOSAVE_MAX_AGE = 5 * 60 * 1000; // 5 phút
 let autosaveInterval = null;
 
+const AUTOSAVE_INTERVAL = 15000;
+const AUTOSAVE_MAX_AGE = 5 * 60 * 1000;
+
+let timeLeft = 0;
+let submitted = false;
+
+/* ================== AUTOSAVE ================== */
 function getAutosaveKey() {
-    return `autosave_${sessionData?.examId || 'unknown'}`;
+    return `autosave_${sessionData.examId}`;
 }
 
 function doAutosave() {
-    if (!sessionData || typeof timeLeft !== 'number' || timeLeft <= 0) return;
+    if (submitted || timeLeft <= 0) return;
 
     try {
-        const data = {
-            examId: sessionData.examId,
-            answers: studentAnswers,
-            timeLeft: timeLeft,
-            savedAt: Date.now()
-        };
-        localStorage.setItem(getAutosaveKey(), JSON.stringify(data));
-    } catch (e) {
-        console.warn('[AUTOSAVE] failed', e);
-    }
+        localStorage.setItem(
+            getAutosaveKey(),
+            JSON.stringify({
+                examId: sessionData.examId,
+                answers: studentAnswers,
+                timeLeft: timeLeft,
+                savedAt: Date.now()
+            })
+        );
+    } catch {}
 }
 
 function restoreAutosaveIfAny() {
@@ -44,68 +47,58 @@ function restoreAutosaveIfAny() {
     try {
         const data = JSON.parse(raw);
 
-        if (data.examId !== sessionData.examId) {
+        if (data.examId !== sessionData.examId) return;
+        if (Date.now() - data.savedAt > AUTOSAVE_MAX_AGE) return;
+        if (data.timeLeft > timeLeft) return;
+
+        if (confirm('Phát hiện bài làm chưa nộp. Khôi phục?')) {
+            studentAnswers = data.answers || {};
+            timeLeft = data.timeLeft;
+        } else {
             localStorage.removeItem(getAutosaveKey());
-            return;
         }
-
-        if (Date.now() - data.savedAt > AUTOSAVE_MAX_AGE) {
-            localStorage.removeItem(getAutosaveKey());
-            return;
-        }
-
-        if (typeof data.timeLeft !== 'number' || data.timeLeft > timeLeft) return;
-
-        const ok = confirm('Phát hiện bài làm chưa nộp. Bạn có muốn khôi phục không?');
-        if (!ok) {
-            localStorage.removeItem(getAutosaveKey());
-            return;
-        }
-
-        studentAnswers = data.answers || {};
-        timeLeft = data.timeLeft;
-
-        console.log('[AUTOSAVE] restored');
-    } catch (e) {
-        console.error('[AUTOSAVE] corrupted → removed');
+    } catch {
         localStorage.removeItem(getAutosaveKey());
     }
 }
 
 /* ================== KHỞI TẠO ================== */
 document.addEventListener('DOMContentLoaded', () => {
-    loadConfigAndStart();
-});
-
-async function loadConfigAndStart() {
-    try {
-        const response = await fetch('config.json');
-        examConfig = await response.json();
-        console.log('✅ Config loaded:', examConfig);
-    } catch (error) {
-        alert('Lỗi tải cấu hình hệ thống!');
-        return;
-    }
-
     sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
-    if (!sessionData || !sessionData.questions) {
-        alert('Không tìm thấy dữ liệu đề thi.');
-        window.location.href = 'index.html';
+
+    if (!sessionData || !sessionData.questions || !sessionData.startToken) {
+        alert('Phiên thi không hợp lệ');
+        location.href = 'index.html';
         return;
     }
 
     currentQuestions = sessionData.questions;
-    examStartTime = new Date();
-    timeLeft = (sessionData.duration || 45) * 60;
 
-    restoreAutosaveIfAny(); // ✅ autosave restore (AN TOÀN)
+    // 🔒 KHÓA THỜI GIAN – KHÔNG RESET KHI RELOAD
+    const startKey = `exam_start_${sessionData.examId}`;
+    const savedStart = localStorage.getItem(startKey);
+
+    if (savedStart) {
+        const elapsed = Math.floor((Date.now() - Number(savedStart)) / 1000);
+        timeLeft = sessionData.duration * 60 - elapsed;
+    } else {
+        localStorage.setItem(startKey, Date.now());
+        timeLeft = sessionData.duration * 60;
+    }
+
+    if (timeLeft <= 0) {
+        submitExam(true);
+        return;
+    }
+
+    restoreAutosaveIfAny();
 
     renderExamHeader();
     renderAllQuestions();
     startTimer();
 
-    autosaveInterval = setInterval(doAutosave, AUTOSAVE_INTERVAL); // ✅ autosave định kỳ
-}
+    autosaveInterval = setInterval(doAutosave, AUTOSAVE_INTERVAL);
+});
 
 /* ================== HEADER + TIMER ================== */
 function renderExamHeader() {
@@ -115,15 +108,12 @@ function renderExamHeader() {
 
 function startTimer() {
     updateTimerDisplay();
+
     timerInterval = setInterval(() => {
         timeLeft--;
         updateTimerDisplay();
 
-        if (timeLeft === 300) alert('⚠️ Còn 5 phút nữa hết giờ!');
-
         if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            alert('⏰ Hết giờ làm bài!');
             submitExam(true);
         }
     }, 1000);
@@ -132,17 +122,16 @@ function startTimer() {
 function updateTimerDisplay() {
     const m = Math.floor(timeLeft / 60);
     const s = timeLeft % 60;
-    document.getElementById('timer').textContent =
-        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-    if (timeLeft < 300) {
-        const t = document.getElementById('timer');
+    const t = document.getElementById('timer');
+    t.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    if (timeLeft <= 300) {
         t.style.color = '#dc3545';
-        t.style.animation = 'blink 1s infinite';
     }
 }
 
-/* ================== RENDER CÂU HỎI ================== */
+/* ================== RENDER CÂU HỎI (GIỮ NGUYÊN LOGIC GỐC) ================== */
 function renderAllQuestions() {
     const container = document.getElementById('exam-container');
     container.innerHTML = '';
@@ -166,38 +155,39 @@ function renderAllQuestions() {
 }
 
 /* ================== LƯU ĐÁP ÁN ================== */
-window.saveAnswer = function (questionId, answer, type) {
+window.saveAnswer = function (questionId, answer) {
+    if (submitted) return;
     studentAnswers[questionId] = answer;
-
-    const card = document.querySelector(`[data-id="${questionId}"]`);
-    if (card) card.classList.add('answered');
-
-    doAutosave(); // ✅ HOOK DUY NHẤT
+    doAutosave();
 };
 
 /* ================== NỘP BÀI ================== */
 async function submitExam(force = false) {
+    if (submitted) return;
     if (!force && !confirm('Bạn chắc chắn muốn nộp bài?')) return;
 
+    submitted = true;
     clearInterval(timerInterval);
-    if (autosaveInterval) clearInterval(autosaveInterval);
+    clearInterval(autosaveInterval);
 
     try {
         const result = await submitExamAPI({
             examId: sessionData.examId,
             answers: studentAnswers,
-            duration: (sessionData.duration * 60 - timeLeft)
+            duration: sessionData.duration * 60 - timeLeft
         });
 
         if (result?.success) {
-            localStorage.removeItem(getAutosaveKey()); // ✅ XÓA AUTOSAVE
+            localStorage.removeItem(getAutosaveKey());
+            localStorage.removeItem(`exam_start_${sessionData.examId}`);
             sessionStorage.removeItem('currentExam');
-            alert('✅ Nộp bài thành công!');
-            window.location.href = 'result.html';
+            location.href = 'result.html';
         } else {
-            alert('❌ Nộp bài thất bại!');
+            alert('Nộp bài thất bại');
+            submitted = false;
         }
-    } catch (e) {
-        alert('❌ Lỗi kết nối khi nộp bài!');
+    } catch {
+        alert('Lỗi kết nối khi nộp bài');
+        submitted = false;
     }
 }
