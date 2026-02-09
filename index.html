@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <title>Vào Phòng Thi | Hệ thống Thi Trực Tuyến</title>
+    <title>VÃ o PhÃ²ng Thi | Há»‡ thá»‘ng Thi Trá»±c Tuyáº¿n</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Hệ thống thi trực tuyến môn Toán THPT">
+    <meta name="description" content="Há»‡ thá»‘ng thi trá»±c tuyáº¿n mÃ´n ToÃ¡n THPT">
     
     <!-- Import API Connector -->
     <script src="assets/js/api-connector.js"></script>
@@ -345,29 +345,29 @@
         <!-- Header -->
         <div class="header">
             <div class="header-icon">
-                📝
+                ðŸ“
             </div>
-            <h2>VÀO PHÒNG THI</h2>
-            <p class="subtitle">Hệ thống thi trực tuyến môn Toán THPT</p>
+            <h2>VÃ€O PHÃ’NG THI</h2>
+            <p class="subtitle">Há»‡ thá»‘ng thi trá»±c tuyáº¿n mÃ´n ToÃ¡n THPT</p>
         </div>
 
         <!-- Form inputs -->
         <div class="input-group">
-            <label for="studentName">Họ và Tên <span style="color: red;">*</span></label>
+            <label for="studentName">Há» vÃ  TÃªn <span style="color: red;">*</span></label>
             <div class="input-wrapper">
                 <input 
                     type="text" 
                     id="studentName" 
-                    placeholder="Nhập họ tên đầy đủ..."
+                    placeholder="Nháº­p há» tÃªn Ä‘áº§y Ä‘á»§..."
                     autocomplete="name"
                     required
                 >
-                <span class="input-icon">👤</span>
+                <span class="input-icon">ðŸ‘¤</span>
             </div>
         </div>
 
         <div class="input-group">
-            <label for="studentClass">Lớp <span style="color: red;">*</span></label>
+            <label for="studentClass">Lá»›p <span style="color: red;">*</span></label>
             <div class="input-wrapper">
                 <input 
                     type="text" 
@@ -376,39 +376,39 @@
                     autocomplete="off"
                     required
                 >
-                <span class="input-icon">🎓</span>
+                <span class="input-icon">ðŸŽ“</span>
             </div>
         </div>
         
         <div class="input-group">
-            <label for="examId">Mã Đề Thi <span style="color: red;">*</span></label>
+            <label for="examId">MÃ£ Äá» Thi <span style="color: red;">*</span></label>
             <div class="input-wrapper">
                 <input 
                     type="text" 
                     id="examId" 
-                    placeholder="Nhập mã đề (VD: TOAN10)"
+                    placeholder="Nháº­p mÃ£ Ä‘á» (VD: TOAN10)"
                     autocomplete="off"
                     required
                 >
-                <span class="input-icon">📋</span>
+                <span class="input-icon">ðŸ“‹</span>
             </div>
         </div>
 
         <!-- Late Entry Section (Hidden by default) -->
         <div id="late-section">
             <div class="input-group">
-                <label for="lateCode">Mã Vào Muộn <span style="color: red;">*</span></label>
+                <label for="lateCode">MÃ£ VÃ o Muá»™n <span style="color: red;">*</span></label>
                 <div class="input-wrapper">
                     <input 
                         type="text" 
                         id="lateCode" 
-                        placeholder="Nhập mã do giáo viên cung cấp"
+                        placeholder="Nháº­p mÃ£ do giÃ¡o viÃªn cung cáº¥p"
                         autocomplete="off"
                     >
-                    <span class="input-icon">🔑</span>
+                    <span class="input-icon">ðŸ”‘</span>
                 </div>
                 <small style="color: var(--text-muted); display: block; margin-top: 5px;">
-                    ⏰ Bạn đã vào muộn. Vui lòng nhập mã từ giám thị.
+                    â° Báº¡n Ä‘Ã£ vÃ o muá»™n. Vui lÃ²ng nháº­p mÃ£ tá»« giÃ¡m thá»‹.
                 </small>
             </div>
         </div>
@@ -418,17 +418,17 @@
         
         <!-- Action Buttons -->
         <button id="btn-submit" class="btn-primary" onclick="checkAndStart()">
-            🚀 Bắt đầu thi
+            ðŸš€ Báº¯t Ä‘áº§u thi
         </button>
         
         <button class="btn-secondary" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/'">
-            🏠 Trang chủ
+            ðŸ  Trang chá»§
         </button>
 
         <!-- Footer -->
         <div class="footer">
-            Cần hỗ trợ? 
-            <a href="https://hxhung.github.io/web-trac-nghiem/lienhe.html" target="_blank">Liên hệ</a>
+            Cáº§n há»— trá»£? 
+            <a href="https://hxhung.github.io/web-trac-nghiem/lienhe.html" target="_blank">LiÃªn há»‡</a>
         </div>
     </div>
 
@@ -476,7 +476,7 @@
 
             try {
                 // Step 1: Check exam access
-                showMessage('info', '<div class="spinner"></div> Đang kiểm tra quyền truy cập...');
+                showMessage('info', '<div class="spinner"></div> Äang kiá»ƒm tra quyá»n truy cáº­p...');
                 const accessResponse = await checkExamAccess(eid, lateCode);
 
                 if (!accessResponse.success) {
@@ -485,11 +485,11 @@
                 }
 
                 // Step 2: Load exam questions
-                showMessage('info', '<div class="spinner"></div> Đang tải đề thi...');
+                showMessage('info', '<div class="spinner"></div> Äang táº£i Ä‘á» thi...');
                 const questionsResponse = await getQuestions(eid);
                 
                 if (!questionsResponse.success) {
-                    showMessage('error', '❌ ' + (questionsResponse.message || 'Không thể tải câu hỏi.'));
+                    showMessage('error', 'âŒ ' + (questionsResponse.message || 'KhÃ´ng thá»ƒ táº£i cÃ¢u há»i.'));
                     return;
                 }
 
@@ -504,7 +504,7 @@
                 });
 
                 // Show success message briefly before redirect
-                showMessage('success', '✅ Đang chuyển vào phòng thi...');
+                showMessage('success', 'âœ… Äang chuyá»ƒn vÃ o phÃ²ng thi...');
                 
                 setTimeout(() => {
                     window.location.href = 'exam.html';
@@ -512,7 +512,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage('error', '❌ Lỗi kết nối máy chủ. Vui lòng thử lại.');
+                showMessage('error', 'âŒ Lá»—i káº¿t ná»‘i mÃ¡y chá»§. Vui lÃ²ng thá»­ láº¡i.');
             } finally {
                 setLoading(false);
             }
@@ -529,14 +529,14 @@
 
             // Validate name
             if (!name) {
-                showMessage('error', '⚠️ Vui lòng nhập họ và tên.');
+                showMessage('error', 'âš ï¸ Vui lÃ²ng nháº­p há» vÃ  tÃªn.');
                 elements.name.classList.add('error');
                 elements.name.focus();
                 return false;
             }
 
             if (name.length < 3) {
-                showMessage('error', '⚠️ Họ tên phải có ít nhất 3 ký tự.');
+                showMessage('error', 'âš ï¸ Há» tÃªn pháº£i cÃ³ Ã­t nháº¥t 3 kÃ½ tá»±.');
                 elements.name.classList.add('error');
                 elements.name.focus();
                 return false;
@@ -544,14 +544,14 @@
 
             // Validate class
             if (!sClass) {
-                showMessage('error', '⚠️ Vui lòng nhập lớp.');
+                showMessage('error', 'âš ï¸ Vui lÃ²ng nháº­p lá»›p.');
                 elements.class.classList.add('error');
                 elements.class.focus();
                 return false;
             }
 
             if (sClass.length < 2) {
-                showMessage('error', '⚠️ Tên lớp không hợp lệ.');
+                showMessage('error', 'âš ï¸ TÃªn lá»›p khÃ´ng há»£p lá»‡.');
                 elements.class.classList.add('error');
                 elements.class.focus();
                 return false;
@@ -559,14 +559,14 @@
 
             // Validate exam ID
             if (!eid) {
-                showMessage('error', '⚠️ Vui lòng nhập mã đề thi.');
+                showMessage('error', 'âš ï¸ Vui lÃ²ng nháº­p mÃ£ Ä‘á» thi.');
                 elements.examId.classList.add('error');
                 elements.examId.focus();
                 return false;
             }
 
             if (!/^[A-Z0-9]+$/.test(eid)) {
-                showMessage('error', '⚠️ Mã đề chỉ gồm chữ IN HOA và số (VD: TOAN10).');
+                showMessage('error', 'âš ï¸ MÃ£ Ä‘á» chá»‰ gá»“m chá»¯ IN HOA vÃ  sá»‘ (VD: TOAN10).');
                 elements.examId.classList.add('error');
                 elements.examId.focus();
                 return false;
@@ -596,12 +596,12 @@
         function setLoading(isLoading) {
             elements.btn.disabled = isLoading;
             if (!isLoading) {
-                elements.btn.innerHTML = '🚀 Bắt đầu thi';
+                elements.btn.innerHTML = 'ðŸš€ Báº¯t Ä‘áº§u thi';
             }
         }
 
         function handleAccessDenied(response) {
-            showMessage('error', '❌ ' + (response.message || 'Không thể truy cập đề thi.'));
+            showMessage('error', 'âŒ ' + (response.message || 'KhÃ´ng thá»ƒ truy cáº­p Ä‘á» thi.'));
             
             // Show late code input if required
             if (response.status === "REQUIRE_CODE") {
