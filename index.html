@@ -159,7 +159,18 @@ async function checkAndStart(){
    }
    const q=await getQuestions(eid);
    if(!q.success)return error('Không tải được đề');
-   sessionStorage.setItem('currentExam',JSON.stringify({examId:eid,title:acc.title,duration:acc.duration,studentName:name,studentClass:cls,questions:q.data}));
+   sessionStorage.setItem(
+  'currentExam',
+  JSON.stringify({
+    examId: eid,
+    title: acc.title,
+    duration: acc.duration,
+    studentName: name,
+    studentClass: cls,
+    questions: q.data,
+    startToken: Date.now()   // 🔴 BẮT BUỘC – KHÓA PHIÊN
+  })
+);
    success('Đang vào phòng thi...');
    setTimeout(()=>location.href='exam.html',500);
  }catch{error('Lỗi máy chủ');}
