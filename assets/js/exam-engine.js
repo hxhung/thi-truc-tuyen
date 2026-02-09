@@ -1,17 +1,78 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN HOÀN CHỈNH & ĐÃ SỬA LỖI
+ * EXAM ENGINE - PHIÊN BẢN HOÀN CHỈNH & ĐÃ FIX AUTOSAVE
  * Quản lý hiển thị câu hỏi, đếm giờ, lưu đáp án, nộp bài
  */
 
+/* ================== BIẾN GỐC ================== */
 let currentQuestions = [];
 let studentAnswers = {};
 let examConfig = null;
 let sessionData = null;
 let timerInterval = null;
 let examStartTime = null;
-let timeLeft = 0; // Thời gian còn lại (giây)
+let timeLeft = 0; // giây
 
-// ===== 1. KHỞI TẠO KHI TRANG LOAD =====
+/* ================== AUTOSAVE (ADD-ON AN TOÀN) ================== */
+const AUTOSAVE_INTERVAL = 15000;        // 15s
+const AUTOSAVE_MAX_AGE = 5 * 60 * 1000; // 5 phút
+let autosaveInterval = null;
+
+function getAutosaveKey() {
+    return `autosave_${sessionData?.examId || 'unknown'}`;
+}
+
+function doAutosave() {
+    if (!sessionData || typeof timeLeft !== 'number' || timeLeft <= 0) return;
+
+    try {
+        const data = {
+            examId: sessionData.examId,
+            answers: studentAnswers,
+            timeLeft: timeLeft,
+            savedAt: Date.now()
+        };
+        localStorage.setItem(getAutosaveKey(), JSON.stringify(data));
+    } catch (e) {
+        console.warn('[AUTOSAVE] failed', e);
+    }
+}
+
+function restoreAutosaveIfAny() {
+    const raw = localStorage.getItem(getAutosaveKey());
+    if (!raw) return;
+
+    try {
+        const data = JSON.parse(raw);
+
+        if (data.examId !== sessionData.examId) {
+            localStorage.removeItem(getAutosaveKey());
+            return;
+        }
+
+        if (Date.now() - data.savedAt > AUTOSAVE_MAX_AGE) {
+            localStorage.removeItem(getAutosaveKey());
+            return;
+        }
+
+        if (typeof data.timeLeft !== 'number' || data.timeLeft > timeLeft) return;
+
+        const ok = confirm('Phát hiện bài làm chưa nộp. Bạn có muốn khôi phục không?');
+        if (!ok) {
+            localStorage.removeItem(getAutosaveKey());
+            return;
+        }
+
+        studentAnswers = data.answers || {};
+        timeLeft = data.timeLeft;
+
+        console.log('[AUTOSAVE] restored');
+    } catch (e) {
+        console.error('[AUTOSAVE] corrupted → removed');
+        localStorage.removeItem(getAutosaveKey());
+    }
+}
+
+/* ================== KHỞI TẠO ================== */
 document.addEventListener('DOMContentLoaded', () => {
     loadConfigAndStart();
 });
@@ -20,338 +81,123 @@ async function loadConfigAndStart() {
     try {
         const response = await fetch('config.json');
         examConfig = await response.json();
-        console.log("✅ Config loaded:", examConfig);
+        console.log('✅ Config loaded:', examConfig);
     } catch (error) {
-        console.error("❌ Lỗi tải config:", error);
         alert('Lỗi tải cấu hình hệ thống!');
         return;
     }
 
-    // Tải dữ liệu đề thi từ sessionStorage
     sessionData = JSON.parse(sessionStorage.getItem('currentExam'));
-    
     if (!sessionData || !sessionData.questions) {
-        alert('Không tìm thấy dữ liệu đề thi. Vui lòng quay lại trang chủ.');
+        alert('Không tìm thấy dữ liệu đề thi.');
         window.location.href = 'index.html';
         return;
     }
 
-    // Khởi tạo dữ liệu
     currentQuestions = sessionData.questions;
     examStartTime = new Date();
-    timeLeft = (sessionData.duration || 45) * 60; // Chuyển phút sang giây
+    timeLeft = (sessionData.duration || 45) * 60;
 
-    // Hiển thị giao diện
+    restoreAutosaveIfAny(); // ✅ autosave restore (AN TOÀN)
+
     renderExamHeader();
     renderAllQuestions();
     startTimer();
+
+    autosaveInterval = setInterval(doAutosave, AUTOSAVE_INTERVAL); // ✅ autosave định kỳ
 }
 
-// ===== 2. HIỂN THỊ HEADER & TIMER =====
+/* ================== HEADER + TIMER ================== */
 function renderExamHeader() {
-    document.getElementById('exam-title').textContent = sessionData.title || 'BÀI THI TRỰC TUYẾN';
+    document.getElementById('exam-title').textContent =
+        sessionData.title || 'BÀI THI TRỰC TUYẾN';
 }
 
 function startTimer() {
     updateTimerDisplay();
-    
     timerInterval = setInterval(() => {
         timeLeft--;
         updateTimerDisplay();
 
-        // Cảnh báo khi còn 5 phút
-        if (timeLeft === 300) {
-            alert('⚠️ Còn 5 phút nữa hết giờ!');
-        }
+        if (timeLeft === 300) alert('⚠️ Còn 5 phút nữa hết giờ!');
 
-        // Hết giờ tự động nộp bài
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            alert('⏰ Hết giờ làm bài! Hệ thống sẽ tự động nộp bài.');
-            submitExam(true); // Force submit
+            alert('⏰ Hết giờ làm bài!');
+            submitExam(true);
         }
     }, 1000);
 }
 
 function updateTimerDisplay() {
-    const minutes = Math.floor(timeLeft / 60);
-    const seconds = timeLeft % 60;
-    const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    document.getElementById('timer').textContent = display;
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    document.getElementById('timer').textContent =
+        `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-    // Đổi màu khi còn dưới 5 phút
     if (timeLeft < 300) {
-        document.getElementById('timer').style.color = '#dc3545';
-        document.getElementById('timer').style.animation = 'blink 1s infinite';
+        const t = document.getElementById('timer');
+        t.style.color = '#dc3545';
+        t.style.animation = 'blink 1s infinite';
     }
 }
 
-// ===== 3. RENDER CÂU HỎI =====
+/* ================== RENDER CÂU HỎI ================== */
 function renderAllQuestions() {
     const container = document.getElementById('exam-container');
-    container.innerHTML = ''; // Xóa nội dung cũ
+    container.innerHTML = '';
 
-    // Phân loại câu hỏi theo type
-    const part1 = currentQuestions.filter(q => q.type === 'MULTIPLE_CHOICE');
-    const part2 = currentQuestions.filter(q => q.type === 'TRUE_FALSE');
-    const part3 = currentQuestions.filter(q => q.type === 'FILL_IN');
+    const p1 = currentQuestions.filter(q => q.type === 'MULTIPLE_CHOICE');
+    const p2 = currentQuestions.filter(q => q.type === 'TRUE_FALSE');
+    const p3 = currentQuestions.filter(q => q.type === 'FILL_IN');
 
-    // Render từng phần
-    if (part1.length > 0) {
-        container.innerHTML += renderPart1(part1);
-    }
-    if (part2.length > 0) {
-        container.innerHTML += renderPart2(part2);
-    }
-    if (part3.length > 0) {
-        container.innerHTML += renderPart3(part3);
-    }
+    if (p1.length) container.innerHTML += renderPart1(p1);
+    if (p2.length) container.innerHTML += renderPart2(p2);
+    if (p3.length) container.innerHTML += renderPart3(p3);
 
-    // Render KaTeX sau khi DOM đã được tạo
     if (window.renderMathInElement) {
         renderMathInElement(document.body, {
             delimiters: [
-                {left: "$$", right: "$$", display: true},
-                {left: "$", right: "$", display: false}
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
             ]
         });
     }
 }
 
-// ===== PHẦN I: TRẮC NGHIỆM ABCD =====
-function renderPart1(questions) {
-    let html = '<div class="section-header">PHẦN I: TRẮC NGHIỆM (3 điểm)</div>';
-    
-    questions.forEach((q, index) => {
-        html += `
-        <div class="question-card" data-id="${q.id}">
-            <div class="question-text">
-                <strong>Câu ${index + 1}:</strong> ${q.contentSub || q.contentRoot}
-            </div>
-            ${q.image ? `<img src="${q.image}" class="question-image" alt="Hình câu ${index+1}">` : ''}
-            <div class="options-grid">
-                ${renderOptions(q.id, q.options)}
-            </div>
-        </div>`;
-    });
-    
-    return html;
-}
-
-function renderOptions(questionId, options) {
-    let html = '';
-    ['A', 'B', 'C', 'D'].forEach(key => {
-        if (options[key]) {
-            html += `
-            <label class="option-item">
-                <input type="radio" name="q${questionId}" value="${key}" 
-                       onchange="saveAnswer(${questionId}, '${key}', 'MULTIPLE_CHOICE')">
-                <span><strong>${key}.</strong> ${options[key]}</span>
-            </label>`;
-        }
-    });
-    return html;
-}
-
-// ===== PHẦN II: ĐÚNG/SAI =====
-function renderPart2(questions) {
-    let html = '<div class="section-header">PHẦN II: ĐÚNG/SAI (4 điểm)</div>';
-    
-    // Nhóm câu hỏi theo contentRoot
-    const groups = groupByContentRoot(questions);
-    
-    groups.forEach((group, groupIndex) => {
-        html += `<div class="question-card">`;
-        
-        // Hiển thị đề bài chung
-        if (group.root) {
-            html += `<div class="root-title">${group.root}</div>`;
-        }
-        
-        // Hiển thị các câu con a, b, c, d
-        group.items.forEach((q, subIndex) => {
-            const label = String.fromCharCode(97 + subIndex); // a, b, c, d
-            html += `
-            <div class="tf-row">
-                <div class="tf-content">
-                    <strong>${label})</strong> ${q.contentSub}
-                </div>
-                <div class="tf-options">
-                    <label>
-                        <input type="radio" name="q${q.id}" value="TRUE" 
-                               onchange="saveAnswer(${q.id}, 'TRUE', 'TRUE_FALSE')">
-                        <span>Đúng</span>
-                    </label>
-                    <label>
-                        <input type="radio" name="q${q.id}" value="FALSE" 
-                               onchange="saveAnswer(${q.id}, 'FALSE', 'TRUE_FALSE')">
-                        <span>Sai</span>
-                    </label>
-                </div>
-            </div>`;
-        });
-        
-        html += `</div>`;
-    });
-    
-    return html;
-}
-
-function groupByContentRoot(questions) {
-    const grouped = {};
-    questions.forEach(q => {
-        const key = q.contentRoot || 'default';
-        if (!grouped[key]) {
-            grouped[key] = { root: q.contentRoot, items: [] };
-        }
-        grouped[key].items.push(q);
-    });
-    return Object.values(grouped);
-}
-
-// ===== PHẦN III: ĐIỀN SỐ =====
-function renderPart3(questions) {
-    let html = '<div class="section-header">PHẦN III: ĐIỀN KHUYẾT (3 điểm)</div>';
-    
-    questions.forEach((q, index) => {
-        html += `
-        <div class="question-card">
-            <div class="question-text">
-                <strong>Câu ${index + 1}:</strong> ${q.contentSub || q.contentRoot}
-            </div>
-            ${q.image ? `<img src="${q.image}" class="question-image" alt="Hình câu ${index+1}">` : ''}
-            <input type="text" 
-                   class="fill-input" 
-                   placeholder="Nhập đáp án (số hoặc chữ)" 
-                   oninput="saveAnswer(${q.id}, this.value, 'FILL_IN')">
-        </div>`;
-    });
-    
-    return html;
-}
-
-// ===== 4. LƯU ĐÁP ÁN =====
-window.saveAnswer = function(questionId, answer, type) {
+/* ================== LƯU ĐÁP ÁN ================== */
+window.saveAnswer = function (questionId, answer, type) {
     studentAnswers[questionId] = answer;
-    
-    // Đánh dấu câu đã trả lời
+
     const card = document.querySelector(`[data-id="${questionId}"]`);
-    if (card) {
-        card.classList.add('answered');
-    }
-    
-    console.log(`✅ Đã lưu: Câu ${questionId} = ${answer}`);
+    if (card) card.classList.add('answered');
+
+    doAutosave(); // ✅ HOOK DUY NHẤT
 };
 
-// ===== 5. NỘP BÀI =====
-window.submitExam = async function(force = false) {
-    // Xác nhận
-    if (!force) {
-        const confirmed = confirm('Bạn có chắc chắn muốn nộp bài?');
-        if (!confirmed) return;
-    }
+/* ================== NỘP BÀI ================== */
+async function submitExam(force = false) {
+    if (!force && !confirm('Bạn chắc chắn muốn nộp bài?')) return;
 
-    // Dừng đồng hồ
-    if (timerInterval) {
-        clearInterval(timerInterval);
-    }
-
-    // Hiển thị màn hình chờ
-    showLoadingOverlay();
+    clearInterval(timerInterval);
+    if (autosaveInterval) clearInterval(autosaveInterval);
 
     try {
-        // Lấy thông tin thí sinh
-        const studentName = sessionData.studentName || localStorage.getItem('lastStudentName') || 'Học sinh';
-        const studentClass = sessionData.studentClass || localStorage.getItem('lastStudentClass') || '';
-
-        // Chuẩn bị dữ liệu
-        const payload = {
+        const result = await submitExamAPI({
             examId: sessionData.examId,
-            studentName: studentName,
-            studentClass: studentClass,
-            answers: studentAnswers
-        };
+            answers: studentAnswers,
+            duration: (sessionData.duration * 60 - timeLeft)
+        });
 
-        console.log("📤 Đang gửi:", payload);
-
-        // Gọi API
-        const result = await submitExam(payload);
-
-        console.log("📥 Nhận về:", result);
-
-        if (result.success) {
-            // Lưu lịch sử
-            saveToHistory({
-                timestamp: new Date().toISOString(),
-                testName: sessionData.title || sessionData.examId,
-                examId: result.examId,
-                studentName: studentName,
-                score: parseFloat(result.score),
-                correctAnswers: 0 // Backend không trả về, tạm để 0
-            });
-
-            // Lưu kết quả để hiển thị trang result.html
-            const resultData = {
-                success: true,
-                examId: result.examId,
-                studentName: studentName,
-                studentClass: studentClass,
-                score: result.score,
-                details: result.details || { p1: 0, p2: 0, p3: 0 }
-            };
-
-            sessionStorage.setItem('examResult', JSON.stringify(resultData));
-
-            // Dọn dẹp
+        if (result?.success) {
+            localStorage.removeItem(getAutosaveKey()); // ✅ XÓA AUTOSAVE
             sessionStorage.removeItem('currentExam');
-
-            // Chuyển trang
+            alert('✅ Nộp bài thành công!');
             window.location.href = 'result.html';
         } else {
-            throw new Error(result.message || 'Lỗi không xác định');
+            alert('❌ Nộp bài thất bại!');
         }
-
-    } catch (error) {
-        hideLoadingOverlay();
-        alert('❌ Lỗi nộp bài: ' + error.message);
-        console.error(error);
-    }
-};
-
-// ===== 6. LOADING OVERLAY =====
-function showLoadingOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'loading-overlay';
-    overlay.innerHTML = `
-        <div class="spinner"></div>
-        <div class="loading-msg">Đang chấm điểm... Vui lòng đợi!</div>
-    `;
-    document.body.appendChild(overlay);
-}
-
-function hideLoadingOverlay() {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
-}
-
-// ===== 7. LƯU LỊCH SỬ =====
-function saveToHistory(record) {
-    try {
-        const oldData = JSON.parse(localStorage.getItem('exam_results') || '[]');
-        oldData.push(record);
-        localStorage.setItem('exam_results', JSON.stringify(oldData));
-        console.log('✅ Đã lưu lịch sử:', record);
     } catch (e) {
-        console.error('❌ Lỗi lưu lịch sử:', e);
+        alert('❌ Lỗi kết nối khi nộp bài!');
     }
 }
-
-// ===== 8. XỬ LÝ KHI RỜI KHỎI TRANG =====
-window.addEventListener('beforeunload', (e) => {
-    if (timerInterval) {
-        e.preventDefault();
-        e.returnValue = 'Bạn chưa nộp bài. Rời khỏi trang sẽ mất dữ liệu!';
-    }
-});
