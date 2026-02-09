@@ -84,57 +84,70 @@ function syncAnswersToUI() {
 /* =====================================================
    2. HÀM RENDER (PHIÊN BẢN CỦA BẠN - ĐÃ CHUẨN HÓA)
    ===================================================== */
+/* =====================================================
+   HÀM RENDER "ĂN TẠP" (FIX LỖI KEY SENSITIVE)
+   ===================================================== */
 function renderExam(rawQuestions) {
     const container = document.getElementById('exam-container');
-    if (!container) {
-        console.error("❌ Không tìm thấy #exam-container");
-        return;
-    }
+    if (!container) return;
 
-    // 1. Validate đầu vào
+    // 1. Kiểm tra dữ liệu thô
     if (!Array.isArray(rawQuestions) || rawQuestions.length === 0) {
-        container.innerHTML =
-            '<div style="text-align:center; padding:20px; color:#c00;">⚠️ Không có dữ liệu câu hỏi</div>';
-        console.error("❌ Dữ liệu questions không hợp lệ:", rawQuestions);
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:red;">⚠️ Không có dữ liệu câu hỏi (Data Empty)</div>';
+        console.error("❌ DATA RỖNG:", rawQuestions);
         return;
     }
 
-    // 2. Chuẩn hóa dữ liệu (FIX gốc Google Sheet: "1" -> 1)
+    // 2. CHUẨN HÓA DỮ LIỆU (QUAN TRỌNG NHẤT)
+    // Tự động map các tên cột khác nhau về chuẩn chung
     const questions = rawQuestions.map((q, idx) => {
-        const part = Number(q.part);
+        // Tìm trường PART (Chấp nhận: part, Part, PART, Phan, phan...)
+        let rawPart = q.part ?? q.Part ?? q.PART ?? q.Phan ?? q.phan ?? q.PHAN;
+        
+        // Tìm trường ID (Chấp nhận: id, ID, Id, question_id...)
+        let rawId = q.id ?? q.ID ?? q.Id ?? q.question_id ?? `auto_id_${idx}`;
 
-        if (![1, 2, 3].includes(part)) {
-            console.warn(`⚠️ Câu ${idx + 1} có part không hợp lệ:`, q.part, q);
-        }
+        // Tìm trường Nội dung (Chấp nhận: questionText, QuestionText, noi_dung, Content...)
+        let rawText = q.questionText ?? q.QuestionText ?? q.question_text ?? q.noi_dung ?? q.Content ?? "";
 
         return {
-            ...q,
-            part // Ghi đè giá trị part đã chuẩn hóa
+            ...q, // Giữ lại các trường khác
+            id: rawId,
+            part: Number(rawPart), // Ép về số
+            questionText: rawText  // Gán vào biến chuẩn để hàm render con đọc được
         };
     });
 
-    // 3. Chia phần – SO SÁNH NGHIÊM (Bây giờ an toàn vì đã là Number)
+    // 3. Debug xem nó nhận được gì
+    console.log("✅ Dữ liệu sau khi chuẩn hóa:", questions);
+
+    // 4. Lọc câu hỏi theo phần
     const p1 = questions.filter(q => q.part === 1);
     const p2 = questions.filter(q => q.part === 2);
     const p3 = questions.filter(q => q.part === 3);
 
-    console.log(`📊 Render: P1=${p1.length}, P2=${p2.length}, P3=${p3.length}`);
+    console.log(`📊 P1: ${p1.length}, P2: ${p2.length}, P3: ${p3.length}`);
 
-    // 4. Fail-safe nếu không có câu hợp lệ
+    // 5. Kiểm tra lại lần cuối
     if (p1.length === 0 && p2.length === 0 && p3.length === 0) {
-        container.innerHTML =
-            '<div style="text-align:center; padding:20px; color:#c00;">❌ Không có câu hỏi hợp lệ để hiển thị</div>';
-        console.error("❌ Tất cả câu hỏi đều sai cấu trúc:", questions);
+        container.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+                <h3 style="color:#dc3545;">❌ Không đọc được phân loại câu hỏi</h3>
+                <p>Hệ thống nhận được ${questions.length} dòng dữ liệu nhưng không tìm thấy cột <b>part/Phần</b> (1, 2, 3).</p>
+                <div style="background:#eee; padding:10px; text-align:left; font-family:monospace; font-size:12px; overflow:auto;">
+                    Dữ liệu dòng 1: ${JSON.stringify(questions[0])}
+                </div>
+            </div>`;
         return;
     }
 
-    // 5. Render HTML
+    // 6. Vẽ giao diện
     container.innerHTML = '';
     if (p1.length) container.innerHTML += renderPart1(p1);
     if (p2.length) container.innerHTML += renderPart2(p2);
     if (p3.length) container.innerHTML += renderPart3(p3);
 
-    // 6. Render công thức toán (KaTeX) - Scoped to container
+    // 7. Kích hoạt KaTeX
     if (window.renderMathInElement) {
         try {
             renderMathInElement(container, {
@@ -143,9 +156,7 @@ function renderExam(rawQuestions) {
                     { left: '$', right: '$', display: false }
                 ]
             });
-        } catch (err) {
-            console.warn("⚠️ Lỗi render công thức:", err);
-        }
+        } catch (e) { console.warn(e); }
     }
 }
 
