@@ -340,66 +340,64 @@ function updateTimerDisplay(el) {
 }
 
 // =====================================================
-// 4. NỘP BÀI
+// 3. NỘP BÀI VÀ TÍNH ĐIỂM
 // =====================================================
-window.finishExam = async function() {
+window.finishExam = async function () {
     if (submitted) return;
-    if (timeLeft > 0 && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
-
-    submitted = true;
-    if (timerInterval) clearInterval(timerInterval);
     
+    // Ngừng đồng hồ
+    if (timerInterval) clearInterval(timerInterval);
+    submitted = true;
+
+    // Hiển thị loading
     const btn = document.querySelector('.btn-submit');
-    if(btn) { btn.disabled = true; btn.innerText = 'Đang nộp...'; }
+    if(btn) { btn.disabled = true; btn.innerText = 'Đang chấm điểm...'; }
+
+    // Tính điểm
+    const result = calculateScore();
+    console.log("Kết quả thi:", result);
 
     try {
-        const result = await submitExam({
-            examId: sessionData.examId,
-            studentName: sessionData.studentName,
-            studentClass: sessionData.studentClass,
-            answers: studentAnswers,
-            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
-        });
-
-        if (result.success) {
-            localStorage.removeItem(`autosave_${sessionData.examId}`);
-            sessionStorage.setItem('examResult', JSON.stringify(result));
-// đoạn mới thêm cho trang thi trực tuyến
-            try {
-                // Tạo đối tượng lịch sử theo định dạng file statistics.html cần
-                const historyItem = {
-                    testName: sessionData.title || sessionData.examId,
-                    studentName: sessionData.studentName,
-                    score: result.finalScore || result.score, // Lấy điểm tổng
-                    timestamp: new Date().toISOString(),
-                    examId: sessionData.examId
-                };
-
-                // Lấy lịch sử cũ từ bộ nhớ máy
-                let history = [];
-                const rawHistory = localStorage.getItem('math_master_history');
-                if (rawHistory) history = JSON.parse(rawHistory);
-
-                // Thêm bài mới vào danh sách
-                history.push(historyItem);
-
-                // Lưu ngược lại vào bộ nhớ
-                localStorage.setItem('math_master_history', JSON.stringify(history));
-                
-                console.log("Đã lưu lịch sử thi thành công!");
-            } catch (err) {
-                console.error("Lỗi lưu lịch sử:", err);
-            }
-//kết thúc đoạn cho trang thi trực tuyến			
-			
-            window.location.href = 'result.html';
-        } else {
-            alert('❌ Lỗi server: ' + (result.message || 'Không xác định'));
-            submitted = false;
-            if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
+        // Gửi kết quả lên Google Sheet (nếu có API)
+        if (typeof sendResultToSheet === 'function') {
+            await sendResultToSheet({
+                ...sessionData,
+                score: result.finalScore,
+                detail: JSON.stringify(result.detail)
+            });
         }
+
+        // Lưu kết quả vào Session để trang result.html hiển thị
+        sessionStorage.setItem('examResult', JSON.stringify(result));
+
+        // --- BẮT ĐẦU ĐOẠN LƯU LỊCH SỬ CHO THỐNG KÊ (STATISTICS.HTML) ---
+        // Đây là đoạn quan trọng để trang Thống kê không bị trắng
+        try {
+            const historyItem = {
+                testName: sessionData.title || ("Mã đề: " + sessionData.examId),
+                studentName: sessionData.studentName || "Học sinh",
+                score: (result.finalScore !== undefined) ? result.finalScore : result.score,
+                timestamp: new Date().toISOString(),
+                examId: sessionData.examId
+            };
+
+            let history = [];
+            const rawHistory = localStorage.getItem('math_master_history');
+            if (rawHistory) history = JSON.parse(rawHistory);
+
+            history.push(historyItem);
+            localStorage.setItem('math_master_history', JSON.stringify(history));
+            console.log("✅ Đã lưu lịch sử thi thành công!");
+        } catch (err) {
+            console.error("❌ Lỗi lưu lịch sử:", err);
+        }
+        // --- KẾT THÚC ĐOẠN LƯU LỊCH SỬ ---
+
+        // Chuyển sang trang kết quả
+        window.location.href = 'result.html';
+
     } catch (e) {
-        alert('❌ Lỗi kết nối: ' + e.message);
+        alert('❌ Lỗi nộp bài: ' + e.message);
         submitted = false;
         if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
     }
