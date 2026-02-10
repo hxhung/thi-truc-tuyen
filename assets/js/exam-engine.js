@@ -364,6 +364,34 @@ window.finishExam = async function() {
         if (result.success) {
             localStorage.removeItem(`autosave_${sessionData.examId}`);
             sessionStorage.setItem('examResult', JSON.stringify(result));
+// đoạn mới thêm cho trang thi trực tuyến
+            try {
+                // Tạo đối tượng lịch sử theo định dạng file statistics.html cần
+                const historyItem = {
+                    testName: sessionData.title || sessionData.examId,
+                    studentName: sessionData.studentName,
+                    score: result.finalScore || result.score, // Lấy điểm tổng
+                    timestamp: new Date().toISOString(),
+                    examId: sessionData.examId
+                };
+
+                // Lấy lịch sử cũ từ bộ nhớ máy
+                let history = [];
+                const rawHistory = localStorage.getItem('math_master_history');
+                if (rawHistory) history = JSON.parse(rawHistory);
+
+                // Thêm bài mới vào danh sách
+                history.push(historyItem);
+
+                // Lưu ngược lại vào bộ nhớ
+                localStorage.setItem('math_master_history', JSON.stringify(history));
+                
+                console.log("Đã lưu lịch sử thi thành công!");
+            } catch (err) {
+                console.error("Lỗi lưu lịch sử:", err);
+            }
+//kết thúc đoạn cho trang thi trực tuyến			
+			
             window.location.href = 'result.html';
         } else {
             alert('❌ Lỗi server: ' + (result.message || 'Không xác định'));
@@ -409,5 +437,4 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Dữ liệu thi bị lỗi. Vui lòng đăng nhập lại.");
         window.location.href = 'index.html';
     }
-
 });
