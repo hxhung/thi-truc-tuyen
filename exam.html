@@ -9,156 +9,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-<style>
-    :root {
-        --primary: #4a90e2;       
-        --primary-light: #e3f2fd; 
-        --text: #2c3e50;          
-        --danger: #e74c3c;        
-        --success: #27ae60;       
-        --bg: #f0f2f5;            
-    }
 
-    body { 
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-        background-color: var(--bg); 
-        color: var(--text); 
-        margin: 0; 
-        padding-bottom: 100px;
-        line-height: 1.5;
-    }
-    
-    /* ===== HEADER ===== */
-    #header {
-        position: sticky; top: 0; z-index: 1000;
-        background: rgba(255, 255, 255, 0.98); 
-        padding: 10px 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid #ddd;
-    }
-    #exam-title { font-weight: 700; color: var(--primary); max-width: 65%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-    #timer { font-family: monospace; font-weight: 800; font-size: 1.3rem; color: #333; background: #eee; padding: 5px 10px; border-radius: 5px; }
-
-    /* ===== CONTAINER & PART HEADERS (Vấn đề 3) ===== */
-    #exam-container { max-width: 800px; margin: 20px auto; padding: 0 15px; }
-
-    .part-header {
-        background: linear-gradient(90deg, var(--primary), #6dd5fa);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin: 30px 0 15px 0;
-        font-weight: 700;
-        text-transform: uppercase;
-        font-size: 1.1rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-
-    /* ===== QUESTION STYLE (Vấn đề 2) ===== */
-    .question-card {
-        background: white; border-radius: 12px;
-        padding: 20px; margin-bottom: 20px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-
-    /* 🔥 QUAN TRỌNG: Cùng hàng, Câu in đậm */
-    .question-content-wrapper {
-        font-size: 1.05rem;
-        color: #333;
-        margin-bottom: 15px;
-    }
-
-    .q-label {
-        color: var(--primary);
-        font-weight: 800; /* In đậm */
-        margin-right: 5px; /* Cách nội dung 1 chút */
-    }
-    
-    .q-text {
-        font-weight: 400; /* Nội dung bình thường */
-    }
-    
-    .q-image img { max-width: 100%; border-radius: 8px; display: block; margin: 10px auto; }
-
-    /* ===== OPTIONS ===== */
-    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .option-item {
-        display: flex; align-items: center;
-        padding: 12px; border: 1px solid #ddd; border-radius: 8px;
-        cursor: pointer; transition: 0.2s;
-    }
-    .option-item:hover { background-color: #f8f9fa; }
-    .option-item.selected { background-color: var(--primary-light); border-color: var(--primary); }
-    .opt-label { font-weight: bold; margin-right: 10px; color: #555; }
-    .option-item input { display: none; } /* Ẩn radio mặc định cho gọn */
-    
-    /* Khi chọn thì tô đậm Label A,B,C,D */
-    .option-item.selected .opt-label { color: var(--primary); }
-
-    /* ===== TRUE/FALSE & FILL IN ===== */
-    .tf-container { background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #eee; }
-    .tf-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-    .tf-row:last-child { border-bottom: none; }
-    .tf-btn { cursor: pointer; padding: 5px 12px; border-radius: 15px; border: 1px solid #ccc; background: white; margin-left: 5px; font-size: 0.9rem; }
-    .tf-btn input { display: none; }
-    
-    .tf-btn:has(input[value="T"]:checked) { background: var(--success); color: white; border-color: var(--success); }
-    .tf-btn:has(input[value="F"]:checked) { background: var(--danger); color: white; border-color: var(--danger); }
-
-    .fill-input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-top: 5px; outline: none; }
-    .fill-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,144,226,0.2); }
-
-    /* ===== SUBMIT BTN ===== */
-    #footer-controls { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; text-align: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
-    .btn-submit { background: var(--primary); color: white; border: none; padding: 12px 40px; border-radius: 25px; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
-    
-    @media (max-width: 600px) {
-        .options-grid { grid-template-columns: 1fr; }
-        .tf-row { flex-direction: column; align-items: flex-start; }
-        .tf-options { margin-top: 8px; align-self: flex-end; }
-    }
-	/* --- CSS CHO MÀN HÌNH CHỜ (LOADING OVERLAY) --- */
-    #loading-overlay {
-        display: none; /* Mặc định ẩn */
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.6); /* Nền tối mờ */
-        z-index: 9999;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        backdrop-filter: blur(5px); /* Làm mờ hậu cảnh */
-    }
-
-    .loading-box {
-        background: white;
-        padding: 30px 50px;
-        border-radius: 16px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        animation: popup 0.3s ease-out;
-    }
-
-    .spinner-big {
-        width: 50px; height: 50px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #4a90e2;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px auto;
-    }
-
-    .loading-text {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes popup { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-</style>
-<!--  style cũ 
     <style>
         /* ===== GLOBAL STYLES ===== */
         * { box-sizing: border-box; }
@@ -441,8 +292,7 @@
                 font-size: 16px; 
             }
         }
-    </style> 
-	Hết style cũ -->
+    </style>
 </head>
 <body>
 
@@ -465,11 +315,5 @@
     <!-- ===== IMPORT SCRIPTS (ĐÚNG THỨ TỰ) ===== -->
     <script src="assets/js/api-connector.js"></script>
     <script src="assets/js/exam-engine.js"></script>
-	<div id="loading-overlay">
-        <div class="loading-box">
-            <div class="spinner-big"></div>
-            <div class="loading-text">Đang chấm điểm...<br><span style="font-size:0.9rem; font-weight:normal; color:#666">Vui lòng đợi trong giây lát</span></div>
-        </div>
-    </div>
 </body>
 </html>
