@@ -3,219 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kết Quả Thi</title>
+    <title>Kết Quả Bài Thi | Hệ Thống Thi Trực Tuyến</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            margin: 0; 
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
+            color: #1e293b;
         }
-        .result-card { 
-            background: white; 
-            width: 90%; 
-            max-width: 450px; 
-            padding: 40px; 
-            border-radius: 20px; 
-            text-align: center; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: slideUp 0.5s ease-out;
+
+        .result-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
         }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        h2 {
-            color: #333;
-            margin: 0 0 10px 0;
-            font-size: 1.8rem;
+
+        .header h2 {
+            margin: 0;
+            color: #334155;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-        .student-info {
-            color: #666;
-            margin: 10px 0 30px 0;
-            font-size: 1rem;
+
+        .student-box {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid #e2e8f0;
         }
-        .score-circle { 
-            width: 140px; 
-            height: 140px; 
-            background: linear-gradient(135deg, #28a745, #20c997);
-            border-radius: 50%; 
-            margin: 20px auto; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            color: white; 
-            font-size: 3rem; 
-            font-weight: bold; 
-            border: 5px solid #d4edda;
-            box-shadow: 0 8px 16px rgba(40, 167, 69, 0.3);
+
+        #student-name {
+            display: block;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
         }
-        .detail-box { 
-            background: #f8f9fa; 
-            border-radius: 10px; 
-            padding: 20px; 
-            margin: 30px 0; 
-            text-align: left; 
+
+        #student-class {
+            font-size: 0.9rem;
+            color: #64748b;
         }
-        .detail-row { 
-            display: flex; 
-            justify-content: space-between; 
-            padding: 10px 0; 
-            border-bottom: 1px dashed #ddd;
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            margin: 30px auto;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             align-items: center;
-        }
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        .detail-label {
-            color: #555;
-            font-size: 0.95rem;
-        }
-        .detail-value {
-            font-weight: bold;
-            color: #333;
-            font-size: 1.05rem;
-        }
-        .btn { 
-            display: block; 
-            width: 100%; 
-            padding: 15px; 
-            background: linear-gradient(135deg, #007bff, #0056b3);
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            margin-top: 10px;
+            background: white;
+            border: 8px solid #e2e8f0;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
         }
-        .btn:hover { 
+
+        .score-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .detail-item {
+            background: white;
+            padding: 12px 5px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .detail-label {
+            font-size: 0.7rem;
+            color: #64748b;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .detail-score {
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .btn-home {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .btn-home:hover {
+            background: var(--primary-dark);
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
         }
-        .btn-secondary {
-            background: linear-gradient(135deg, #6c757d, #5a6268);
-            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-        }
+
         .error-msg {
-            color: #dc3545;
-            padding: 20px;
-            background: #fff5f5;
+            color: var(--danger);
+            background: #fef2f2;
+            padding: 15px;
             border-radius: 10px;
             margin: 20px 0;
         }
     </style>
 </head>
 <body>
-    <div class="result-card">
-        <h2>🎯 KẾT QUẢ BÀI THI</h2>
-        <div class="student-info" id="student-info">Đang tải...</div>
-        
-        <div class="score-circle" id="final-score">0.0</div>
-        
-        <div class="detail-box">
-            <div class="detail-row">
-                <span class="detail-label">📝 Trắc nghiệm:</span>
-                <strong class="detail-value" id="p1">0 điểm</strong>
+
+    <div class="result-container" id="main-content">
+        <div class="header">
+            <h2>KẾT QUẢ BÀI THI</h2>
+        </div>
+
+        <div class="student-box">
+            <span id="student-name">Đang tải...</span>
+            <span id="student-class">---</span>
+        </div>
+
+        <div class="score-circle" id="score-ring">
+            <span class="score-value" id="final-score">0</span>
+            <span class="score-label">ĐIỂM</span>
+        </div>
+
+        <div class="details-grid">
+            <div class="detail-item">
+                <span class="detail-label">Phần I</span>
+                <span class="detail-score" id="p1">0.0</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">⚖️ Đúng/Sai:</span>
-                <strong class="detail-value" id="p2">0 điểm</strong>
+            <div class="detail-item">
+                <span class="detail-label">Phần II</span>
+                <span class="detail-score" id="p2">0.0</span>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">✏️ Điền số:</span>
-                <strong class="detail-value" id="p3">0 điểm</strong>
+            <div class="detail-item">
+                <span class="detail-label">Phần III</span>
+                <span class="detail-score" id="p3">0.0</span>
             </div>
         </div>
 
-        <button class="btn" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/index.html'">
-            🏠 Về TRANG CHỦ
-        </button>
-        <button class="btn btn-secondary" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/statistics.html'">
-            📊 Xem Thống Kê
-        </button>
+        <a href="index.html" class="btn-home">Quay lại Trang chủ</a>
     </div>
 
     <script>
-        // ===== LOAD KẾT QUẢ KHI TRANG MỞ =====
         document.addEventListener('DOMContentLoaded', () => {
-            loadResult();
+            loadFinalResult();
         });
 
-        function loadResult() {
+        function loadFinalResult() {
             try {
-                const raw = sessionStorage.getItem('examResult');
+                // 1. Lấy dữ liệu từ SessionStorage (Kết quả từ exam-engine.js gửi qua)
+                const rawResult = sessionStorage.getItem('examResult');
+                const rawExam = sessionStorage.getItem('currentExam'); // Thông tin thí sinh gốc
                 
-                if (!raw) {
-                    showError('Không tìm thấy kết quả thi. Vui lòng làm bài lại.');
-                    return;
+                if (!rawResult) {
+                    throw new Error("Không tìm thấy dữ liệu kết quả.");
                 }
 
-                const data = JSON.parse(raw);
-                console.log('📊 Dữ liệu kết quả:', data);
+                const data = JSON.parse(rawResult);
+                const studentInfo = JSON.parse(rawExam || '{}');
 
-                // Kiểm tra cấu trúc dữ liệu
-                if (!data.success) {
-                    showError(data.message || 'Có lỗi xảy ra khi chấm bài.');
-                    return;
-                }
+                console.log("📊 Dữ liệu hiển thị:", data);
 
-                // 1. HIỂN THỊ THÔNG TIN THÍ SINH
-                const name = data.studentName || localStorage.getItem('lastStudentName') || "Thí sinh";
-                const sClass = data.studentClass || localStorage.getItem('lastStudentClass') || "";
-                document.getElementById('student-info').textContent = `${name}${sClass ? ' - ' + sClass : ''}`;
+                // 2. Hiển thị thông tin thí sinh (Ưu tiên thông tin từ session gốc)
+                document.getElementById('student-name').textContent = studentInfo.studentName || "Thí sinh";
+                document.getElementById('student-class').textContent = "Lớp: " + (studentInfo.studentClass || "Tự do");
 
-                // 2. HIỂN THỊ ĐIỂM TỔNG
-                const totalScore = parseFloat(data.score || 0);
-                document.getElementById('final-score').textContent = totalScore.toFixed(1);
+                // 3. Xử lý điểm số (Dựa trên cấu trúc code_new.js trả về: {success, result: {finalScore, p1, p2, p3}})
+                // data ở đây chính là phản hồi từ server
+                const res = data.result || {};
+                const finalScore = parseFloat(res.finalScore || 0);
 
-                // Đổi màu theo điểm
-                const scoreCircle = document.getElementById('final-score');
-                if (totalScore >= 8) {
-                    scoreCircle.style.background = 'linear-gradient(135deg, #28a745, #20c997)';
-                } else if (totalScore >= 6.5) {
-                    scoreCircle.style.background = 'linear-gradient(135deg, #007bff, #0056b3)';
-                } else if (totalScore >= 5) {
-                    scoreCircle.style.background = 'linear-gradient(135deg, #ffc107, #ff9800)';
+                // Hiển thị điểm tổng
+                const scoreEl = document.getElementById('final-score');
+                scoreEl.textContent = finalScore.toFixed(1);
+
+                // Đổi màu vòng tròn theo điểm số
+                const ring = document.getElementById('score-ring');
+                if (finalScore >= 8) {
+                    ring.style.borderColor = '#22c55e'; // Xanh lá
+                    scoreEl.style.color = '#22c55e';
+                } else if (finalScore >= 5) {
+                    ring.style.borderColor = '#eab308'; // Vàng
+                    scoreEl.style.color = '#eab308';
                 } else {
-                    scoreCircle.style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+                    ring.style.borderColor = '#ef4444'; // Đỏ
+                    scoreEl.style.color = '#ef4444';
                 }
 
-                // 3. HIỂN THỊ ĐIỂM CHI TIẾT
-                const details = data.details || {};
-                
-                const p1Score = parseFloat(details.p1 || 0);
-                const p2Score = parseFloat(details.p2 || 0);
-                const p3Score = parseFloat(details.p3 || 0);
-
-                document.getElementById('p1').textContent = p1Score.toFixed(2) + ' điểm';
-                document.getElementById('p2').textContent = p2Score.toFixed(2) + ' điểm';
-                document.getElementById('p3').textContent = p3Score.toFixed(2) + ' điểm';
-
-                // 4. XÓA DỮ LIỆU KẾT QUẢ KHỎI SESSION (tránh xem lại nhiều lần)
-                // sessionStorage.removeItem('examResult'); // Tùy chọn
+                // Hiển thị chi tiết từng phần
+                document.getElementById('p1').textContent = (res.p1?.score || 0).toFixed(2);
+                document.getElementById('p2').textContent = (res.p2?.score || 0).toFixed(2);
+                document.getElementById('p3').textContent = (res.p3?.score || 0).toFixed(2);
 
             } catch (error) {
-                console.error('❌ Lỗi load kết quả:', error);
-                showError('Lỗi hiển thị kết quả: ' + error.message);
+                console.error('❌ Lỗi:', error);
+                document.getElementById('main-content').innerHTML = `
+                    <div class="error-msg">
+                        <h3>Đã có lỗi xảy ra</h3>
+                        <p>${error.message}</p>
+                        <a href="index.html" class="btn-home">Quay lại trang chủ</a>
+                    </div>
+                `;
             }
-        }
-
-        function showError(message) {
-            const card = document.querySelector('.result-card');
-            card.innerHTML = `
-                <h2 style="color: #dc3545;">❌ LỖI</h2>
-                <div class="error-msg">${message}</div>
-                <button class="btn" onclick="window.location.href='https://hxhung.github.io/web-trac-nghiem/index.html'">
-                    🏠 Về TRANG CHỦ
-                </button>
-            `;
         }
     </script>
 </body>
