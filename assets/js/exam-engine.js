@@ -16,49 +16,55 @@ let submitted = false;
 // =====================================================
 // CHỈ CẦN THAY THẾ HÀM NÀY (GIỮ NGUYÊN PHẦN CÒN LẠI)
 // =====================================================
+w// =====================================================
+// 1. INIT EXAM (ĐÃ FIX: ID CÂU HỎI + THỜI GIAN)
+// =====================================================
 window.initExam = function (data) {
-    console.log("Đang khởi tạo bài thi...", data);
+    console.log("Dữ liệu khởi tạo:", data);
     if (!data) return;
     sessionData = data;
     
+    // --- 1. XỬ LÝ CÂU HỎI & ID (FIX LỖI 0 ĐIỂM) ---
     const allQuestions = data.questions || [];
-    
-    // 1. Lọc câu hỏi theo mã đề
-    // Fix lỗi CSV: Nếu câu True/False bị khuyết nội dung gốc thì lấy của dòng trên
     let lastContentRoot = "";
-    
-    // Lọc ra các câu thuộc đề thi này
+
+    // Lọc câu hỏi theo mã đề
     let filteredQuestions = allQuestions.filter(q => {
         const qId = q.ExamID || q.examId || q.MaDe || ""; 
         return String(qId).trim().toLowerCase() === String(sessionData.examId).trim().toLowerCase();
     });
 
-    // 2. Xử lý dữ liệu & TỰ ĐỘNG GÁN ID THEO SỐ THỨ TỰ (FIX LỖI 0 ĐIỂM)
+    // Gán ID tự động theo số thứ tự (0, 1, 2...)
     currentQuestions = filteredQuestions.map((q, index) => {
-        // Xử lý điền nội dung thiếu cho câu chùm (True/False)
+        // Fix lỗi CSV True/False bị khuyết nội dung
         if (q.Type === "TN_DUNG_SAI" || q.Type === "TRUE_FALSE") {
             const root = q.Content_Root || q.Question_Root;
             if (root) lastContentRoot = root;
             else q.Content_Root = lastContentRoot;
         }
 
-        // --- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT ---
-        // Vì CSV không có ID, ta buộc phải dùng số thứ tự (index) làm ID
-        // Server cũ của bạn chắc chắn chấm điểm dựa trên thứ tự này.
+        // QUAN TRỌNG: Gán QuestionID = index để khớp với Server chấm điểm
         q.QuestionID = String(index); 
-        // ------------------------------------
-
-        // Chuẩn hóa tên loại câu hỏi
+        
+        // Chuẩn hóa loại câu hỏi
         if(q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
         if(q.Type === 'TN_DUNG_SAI') q.Type = 'TRUE_FALSE';
-
         return q;
     });
 
-    console.log("Dữ liệu sau khi fix ID:", currentQuestions); // F12 để xem ID đã là 0, 1, 2... chưa
-
     renderQuestions();
-    startTimer(data.duration);
+
+    // --- 2. XỬ LÝ THỜI GIAN (FIX LỖI HẾT GIỜ NGAY) ---
+    // Tìm thời gian ở mọi biến có thể (duration, Duration, Duration_Min...)
+    let durationMin = parseInt(data.duration) || parseInt(data.Duration) || parseInt(data.Duration_Min);
+    
+    // An toàn: Nếu không tìm thấy thời gian hoặc = 0, mặc định cho 60 phút (để test được)
+    if (!durationMin || isNaN(durationMin) || durationMin <= 0) {
+        console.warn("⚠️ Không tìm thấy thời gian làm bài, mặc định set 60 phút.");
+        durationMin = 60; 
+    }
+    
+    startTimer(durationMin);
 };
 
 
@@ -832,3 +838,60 @@ window.finishExam = function() {
         submitFinal();
     }
 };
+// =====================================================
+// 2. START TIMER (ĐÃ FIX: KHÔNG BỊ HẾT GIỜ OAN)
+// =====================================================
+window.startTimer = function(minutes) {
+    // Xóa bộ đếm cũ nếu có
+    if (timerInterval) clearInterval(timerInterval);
+
+    // Tính toán thời gian còn lại
+    // Ưu tiên tính theo thời điểm bắt đầu (startToken) để reload trang không bị reset giờ
+    if (sessionData && sessionData.startToken) {
+        const now = Date.now();
+        const startTime = parseInt(sessionData.startToken);
+        const elapsedSeconds = Math.floor((now - startTime) / 1000);
+        timeLeft = (minutes * 60) - elapsedSeconds;
+
+        // Nếu tính ra âm (do token cũ quá), reset lại full thời gian để tránh bị kick ra ngay
+        if (timeLeft <= 0) {
+            console.warn("⚠️ Phiên làm bài đã hết hạn, nhưng đang reset lại để bạn kiểm tra.");
+            timeLeft = minutes * 60;
+            // Cập nhật lại token mới để không bị lỗi tiếp
+            sessionData.startToken = Date.now();
+            sessionStorage.setItem('currentExam', JSON.stringify(sessionData));
+        }
+    } else {
+        // Nếu không có token, tính theo cách truyền thống
+        timeLeft = minutes * 60;
+    }
+
+    // Cập nhật giao diện ngay lập tức
+    updateTimerDisplay();
+
+    // Bắt đầu đếm ngược
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            finishExam(true); // Hết giờ thật sự mới nộp
+        }
+    }, 1000);
+};
+
+// Hàm phụ để hiển thị đồng hồ
+function updateTimerDisplay() {
+    const timerDisplay = document.getElementById('timer');
+    if (!timerDisplay) return;
+
+    if (timeLeft < 0) timeLeft = 0;
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+    
+    // Đổi màu đỏ khi còn dưới 5 phút
+    if (timeLeft < 300) timerDisplay.style.color = 'red';
+    else timerDisplay.style.color = '#2d3748';
+}
