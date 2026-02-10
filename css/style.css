@@ -1,102 +1,163 @@
 /* =========================================
-   STYLE.CSS - DÀNH RIÊNG CHO TRANG LOGIN
+   GLOBAL VARIABLES & RESET
    ========================================= */
 :root {
-    --primary: #4a90e2;
-    --primary-dark: #357abd;
-    --text-main: #2c3e50;
-    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --primary: #4a90e2;       /* Xanh dương chủ đạo */
+    --primary-dark: #357abd;  /* Xanh đậm khi hover */
+    --text-main: #2c3e50;     /* Màu chữ chính */
+    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); /* Nền gradient */
     --white: #ffffff;
-    --shadow: 0 10px 25px rgba(0,0,0,0.1);
-    --radius: 12px;
+    --shadow: 0 10px 25px rgba(0,0,0,0.1); /* Bóng đổ mượt */
+    --radius: 12px;           /* Bo góc */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg-gradient);
     min-height: 100vh;
-    display: flex; /* Căn giữa màn hình */
+    display: flex;
     justify-content: center;
     align-items: center;
     color: var(--text-main);
     padding: 20px;
 }
 
-.login-container {
+/* =========================================
+   LOGIN CARD (Dùng cho index.html)
+   ========================================= */
+.login-container, .card {
     background: var(--white);
     padding: 40px;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     width: 100%;
-    max-width: 400px;
+    max-width: 400px; /* Độ rộng vừa phải */
     text-align: center;
+    transition: transform 0.3s ease;
 }
 
-h1, h2, h3 { color: var(--primary); margin-bottom: 10px; font-weight: 700; }
-.sub-title { color: #666; margin-bottom: 30px; font-size: 0.9rem; }
-
-/* --- FORM INPUTS (Đã fix lỗi Icon bị to) --- */
-.form-group { margin-bottom: 20px; text-align: left; }
-label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
-
-.input-wrapper {
-    position: relative; /* Quan trọng để đặt icon */
+.login-container:hover {
+    transform: translateY(-5px); /* Hiệu ứng nổi lên khi di chuột */
 }
 
-/* Fix lỗi icon khổng lồ ở đây */
-.input-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    color: #888;
+/* Tiêu đề */
+h1, h2, h3 {
+    color: var(--primary);
+    margin-bottom: 25px;
+    font-weight: 700;
 }
 
-input[type="text"], input[type="number"] {
+/* Form inputs */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+input[type="text"], 
+input[type="number"], 
+select {
     width: 100%;
-    padding: 12px 15px 12px 40px; /* Padding trái 40px để tránh icon */
+    padding: 12px 15px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-size: 1rem;
-    background: #f9f9f9;
     transition: all 0.3s;
+    background: #f9f9f9;
 }
 
-input:focus {
+input:focus, select:focus {
     border-color: var(--primary);
     background: #fff;
-    outline: none;
     box-shadow: 0 0 0 4px rgba(74, 144, 226, 0.15);
+    outline: none;
 }
 
-/* BUTTONS & MESSAGES */
-.btn {
+/* =========================================
+   BUTTONS
+   ========================================= */
+.btn, button {
     background: var(--primary);
     color: white;
     border: none;
-    padding: 12px;
+    padding: 12px 30px;
     border-radius: 30px;
     font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
+    transition: all 0.2s;
     width: 100%;
     margin-top: 10px;
+    box-shadow: 0 4px 6px rgba(74, 144, 226, 0.3);
 }
-.btn:hover { background: var(--primary-dark); }
-.btn:disabled { background: #ccc; }
 
-.home-btn {
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    margin-top: 15px; color: #666; text-decoration: none; font-size: 0.9rem;
+.btn:hover, button:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(74, 144, 226, 0.4);
 }
-.home-btn svg { width: 16px; height: 16px; }
 
+.btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* =========================================
+   UTILITIES & MESSAGES
+   ========================================= */
 .hidden { display: none; }
-.message { padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 0.9rem; display: none; }
-.error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
-.success { background: #d1fae5; color: #059669; border: 1px solid #a7f3d0; }
-.footer { margin-top: 30px; font-size: 0.8rem; color: #aaa; }
+
+/* Thông báo lỗi/thành công */
+.alert, .message {
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    display: none; /* Mặc định ẩn */
+}
+
+.alert-danger, .error {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.alert-success, .success {
+    background-color: #d1fae5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+/* Spinner xoay xoay */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Footer bản quyền */
+.footer {
+    margin-top: 30px;
+    font-size: 0.85rem;
+    color: #888;
+}
