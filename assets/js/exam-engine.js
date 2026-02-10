@@ -600,3 +600,164 @@ window.renderQuestions = function() {
         try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
     }
 };
+// =====================================================
+// RENDER GIAO DIỆN V6 (BẢN FIX CHUẨN DỮ LIỆU)
+// =====================================================
+window.renderQuestions = function() {
+    console.log("Đang chạy renderQuestions V6 (Fix dữ liệu Content_Root/Sub)");
+    const container = document.getElementById('exam-container');
+    if (!container) return;
+
+    // Cập nhật tiêu đề
+    const titleEl = document.getElementById('exam-title');
+    if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
+    
+    // --- HÀM TRỢ GIÚP LẤY DỮ LIỆU (QUAN TRỌNG) ---
+    // 1. Lấy nội dung cho câu hỏi đơn (Phần 1, 3): Ưu tiên Content_Root
+    const getMainText = (q) => {
+        return q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || ""; 
+    };
+
+    // 2. Lấy nội dung cho ý nhỏ (Phần 2): Ưu tiên Content_Sub
+    const getSubText = (q) => {
+        return q.Content_Sub || q.Content || q.Question || ""; 
+    };
+    
+    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
+    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
+
+    // Phân loại câu hỏi
+    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
+    const partTitles = {
+        "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
+        "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
+        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
+    };
+
+    currentQuestions.forEach(q => {
+        let type = q.Type || "MULTIPLE_CHOICE"; 
+        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
+        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
+        if (parts[type]) parts[type].push(q);
+    });
+
+    let html = '';
+
+    // Template Header (Không in đậm theo yêu cầu)
+    const createHeader = (idx, content, img) => `
+        <div class="question-header">
+            <div class="q-badge">Câu ${idx}</div>
+            <div class="q-content">
+                ${content}
+                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
+            </div>
+        </div>
+    `;
+
+    // --- RENDER PHẦN 1 ---
+    if (parts["MULTIPLE_CHOICE"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
+        parts["MULTIPLE_CHOICE"].forEach((q, i) => {
+            const realIdx = i + 1;
+            const qID = getID(q);
+            const savedVal = studentAnswers[qID] || "";
+            
+            // Dùng getMainText (Lấy Content_Root)
+            html += `<div class="question-item">
+                ${createHeader(realIdx, getMainText(q), getImg(q))}
+                <div class="options-grid">
+                    ${['A','B','C','D'].map(opt => {
+                        const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
+                        const checked = savedVal === opt ? 'checked' : '';
+                        return `
+                        <label class="option-item">
+                            <input type="radio" name="q_${qID}" value="${opt}" ${checked} 
+                                onchange="saveAnswer('${qID}', '${opt}')">
+                            <span><b>${opt}.</b> ${optVal}</span>
+                        </label>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // --- RENDER PHẦN 2 ---
+    if (parts["TRUE_FALSE"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
+        
+        let currentRoot = "###INIT###";
+        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
+        let subIdx = 0; 
+        let isGroupOpen = false; 
+
+        parts["TRUE_FALSE"].forEach((q) => {
+            // Header chung lấy từ Content_Root
+            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
+            const qID = getID(q);
+            
+            if (rootText !== currentRoot) {
+                if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
+                
+                currentRoot = rootText;
+                globalIdx++;
+                subIdx = 0;
+
+                html += `<div class="question-item">
+                            ${createHeader(globalIdx, currentRoot, null)}
+                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
+                isGroupOpen = true;
+            }
+
+            // Ý nhỏ lấy từ Content_Sub
+            let subText = getSubText(q);
+            
+            const labelChar = String.fromCharCode(97 + (subIdx % 4)); 
+            subIdx++;
+            const sVal = studentAnswers[qID] || "";
+            
+            html += `
+            <div class="tf-row">
+                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${subText}</span>
+                <div class="tf-options">
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
+                </div>
+            </div>`;
+        });
+
+        if (isGroupOpen) html += `</div></div>`; 
+        html += `</div>`;
+    }
+
+    // --- RENDER PHẦN 3 ---
+    if (parts["SHORT_ANSWER"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
+        
+        const p1Count = parts["MULTIPLE_CHOICE"].length;
+        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
+        let currentIdx = p1Count + p2Count;
+
+        parts["SHORT_ANSWER"].forEach((q) => {
+            currentIdx++;
+            const qID = getID(q);
+            const sVal = studentAnswers[qID] || "";
+            
+            // Dùng getMainText (Lấy Content_Root)
+            html += `<div class="question-item">
+                ${createHeader(currentIdx, getMainText(q), getImg(q))}
+                <div class="fill-input-container">
+                    <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
+                        onchange="saveAnswer('${qID}', this.value)">
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+    
+    if (window.renderMathInElement) {
+        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
+    }
+};
