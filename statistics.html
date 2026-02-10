@@ -1,10 +1,10 @@
-<! ver 1.1 21/01/2026 fix lá»—i biÃªu Ä‘á»“ ngÆ°á»£c trá»¥c thá»i gian >
+<! ver 1.1 21/01/2026 fix lỗi biêu đồ ngược trục thời gian >
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thá»‘ng kÃª há»c táº­p | Web tráº¯c nghiá»‡m ToÃ¡n THPT</title>
+    <title>Thống kê học tập | Web trắc nghiệm Toán THPT</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -483,19 +483,19 @@
     <div class="header-card text-center">
         <h1 class="display-6 fw-semibold mb-3">
             <i class="fas fa-chart-line text-primary"></i>
-            THá»NG KÃŠ Há»ŒC Táº¬P
+            THỐNG KÊ HỌC TẬP
         </h1>
 
-        <p class="header-desc">Theo dÃµi tiáº¿n trÃ¬nh há»c táº­p cá»§a báº¡n.</p>
-        <p class="header-desc">Dá»¯ liá»‡u thá»‘ng kÃª chá»‰ Ä‘Æ°á»£c lÆ°u trÃªn trÃ¬nh duyá»‡t cá»§a thiáº¿t bá»‹ nÃ y, khÃ´ng ai khÃ¡c cÃ³ thá»ƒ xem.</p>
-        <p class="header-desc">Báº¡n cÃ³ thá»ƒ xÃ³a dá»¯ liá»‡u thá»‘ng kÃª báº¥t cá»© lÃºc nÃ o.</p>
+        <p class="header-desc">Theo dõi tiến trình học tập của bạn.</p>
+        <p class="header-desc">Dữ liệu thống kê chỉ được lưu trên trình duyệt của thiết bị này, không ai khác có thể xem.</p>
+        <p class="header-desc">Bạn có thể xóa dữ liệu thống kê bất cứ lúc nào.</p>
 
         <div class="d-flex justify-content-center gap-2 flex-wrap mt-3">
             <a href="index.html" class="btn btn-outline-primary">
-                <i class="fas fa-home"></i> Trang chá»§
+                <i class="fas fa-home"></i> Trang chủ
             </a>
             <button onclick="clearData()" class="btn btn-outline-danger">
-                <i class="fas fa-trash"></i> XÃ³a dá»¯ liá»‡u
+                <i class="fas fa-trash"></i> Xóa dữ liệu
             </button>
         </div>
     </div>
@@ -503,10 +503,10 @@
     <!-- Empty State -->
     <div id="emptyState" class="stat-card empty-state">
         <i class="fas fa-chart-bar"></i>
-        <h4 class="fw-semibold">ChÆ°a cÃ³ dá»¯ liá»‡u thá»‘ng kÃª</h4>
-        <p>Báº¡n chÆ°a lÃ m bÃ i thi nÃ o. HÃ£y báº¯t Ä‘áº§u Ä‘á»ƒ xem thá»‘ng kÃª.</p>
+        <h4 class="fw-semibold">Chưa có dữ liệu thống kê</h4>
+        <p>Bạn chưa làm bài thi nào. Hãy bắt đầu để xem thống kê.</p>
         <a href="index.html" class="btn btn-primary btn-lg mt-3">
-            <i class="fas fa-play"></i> Báº¯t Ä‘áº§u lÃ m bÃ i
+            <i class="fas fa-play"></i> Bắt đầu làm bài
         </a>
     </div>
 
@@ -518,7 +518,7 @@
                 <div class="stat-card text-center">
                     <div class="stat-icon mx-auto"><i class="fas fa-clipboard-list"></i></div>
                     <div class="stat-value" id="totalTests">0</div>
-                    <div class="stat-label">Tá»•ng sá»‘ bÃ i thi</div>
+                    <div class="stat-label">Tổng số bài thi</div>
                 </div>
             </div>
 
@@ -526,7 +526,7 @@
                 <div class="stat-card text-center">
                     <div class="stat-icon mx-auto"><i class="fas fa-star"></i></div>
                     <div class="stat-value" id="avgScore">0</div>
-                    <div class="stat-label">Äiá»ƒm trung bÃ¬nh</div>
+                    <div class="stat-label">Điểm trung bình</div>
                     <div class="score-progress">
                         <div class="score-progress-bar" id="avgScoreProgress"></div>
                     </div>
@@ -537,7 +537,7 @@
                 <div class="stat-card text-center">
                     <div class="stat-icon mx-auto"><i class="fas fa-trophy"></i></div>
                     <div class="stat-value" id="highScore">0</div>
-                    <div class="stat-label">Äiá»ƒm cao nháº¥t</div>
+                    <div class="stat-label">Điểm cao nhất</div>
                 </div>
             </div>
 
@@ -545,7 +545,7 @@
                 <div class="stat-card text-center">
                     <div class="stat-icon mx-auto"><i class="fas fa-check-circle"></i></div>
                     <div class="stat-value" id="totalCorrect">0</div>
-                    <div class="stat-label">Tá»•ng cÃ¢u Ä‘Ãºng</div>
+                    <div class="stat-label">Tổng câu đúng</div>
                 </div>
             </div>
         </div>
@@ -554,7 +554,7 @@
         <div class="chart-container">
             <h6 class="fw-semibold mb-3">
                 <i class="fas fa-chart-line text-primary"></i>
-                Biá»ƒu Ä‘á»“ Ä‘iá»ƒm sá»‘ (10 bÃ i gáº§n nháº¥t)
+                Biểu đồ điểm số (10 bài gần nhất)
             </h6>
             <canvas id="scoreChart"></canvas>
         </div>
@@ -563,7 +563,7 @@
         <div class="stat-card">
             <h6 class="fw-semibold mb-4">
                 <i class="fas fa-history text-primary"></i>
-                Lá»‹ch sá»­ lÃ m bÃ i
+                Lịch sử làm bài
             </h6>
             
             <!-- Table for Desktop -->
@@ -571,10 +571,10 @@
                 <table class="table table-hover history-table">
                     <thead>
                         <tr>
-                            <th class="col-datetime">NgÃ y giá»</th>
-                            <th class="col-title">TÃªn Ä‘á»</th>
-                            <th class="col-student">Há»c sinh</th>
-                            <th class="col-score text-center">Äiá»ƒm</th>
+                            <th class="col-datetime">Ngày giờ</th>
+                            <th class="col-title">Tên đề</th>
+                            <th class="col-student">Học sinh</th>
+                            <th class="col-score text-center">Điểm</th>
                         </tr>
                     </thead>
                     <tbody id="historyList"></tbody>
@@ -589,10 +589,10 @@
         <div class="footer-buttons text-center">
             <div class="d-flex justify-content-center gap-2 flex-wrap">
                 <a href="index.html" class="btn">
-                    <i class="fas fa-home"></i> Trang chá»§
+                    <i class="fas fa-home"></i> Trang chủ
                 </a>
                 <button onclick="clearData()" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> XÃ³a dá»¯ liá»‡u
+                    <i class="fas fa-trash"></i> Xóa dữ liệu
                 </button>
             </div>
         </div>
@@ -628,7 +628,7 @@
         getScoreHistory(limit = 10) {
 			const results = this.getAllResults();
 			return results
-				.slice(-limit)   // láº¥y 10 bÃ i Gáº¦N NHáº¤T
+				.slice(-limit)   // lấy 10 bài GẦN NHẤT
 				.map(r => ({
 					date: new Date(r.timestamp).toLocaleDateString('vi-VN'),
 					score: parseFloat(r.score),
@@ -680,7 +680,7 @@
         scoreChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: history.map((_,i)=>`Láº§n ${i+1}`),
+                labels: history.map((_,i)=>`Lần ${i+1}`),
                 datasets: [{
                     data: history.map(h=>h.score),
                     borderColor: '#1a73e8',
@@ -761,7 +761,7 @@
         
         // Load table for desktop
         historyList.innerHTML = results.length === 0
-            ? `<tr><td colspan="4" class="text-center text-muted">ChÆ°a cÃ³ lá»‹ch sá»­</td></tr>`
+            ? `<tr><td colspan="4" class="text-center text-muted">Chưa có lịch sử</td></tr>`
             : results.map(r=>{
                 const d=new Date(r.timestamp);
                 const score = parseFloat(r.score).toFixed(2);
@@ -781,7 +781,7 @@
 
         // Load cards for mobile
         historyCards.innerHTML = results.length === 0
-            ? `<div class="text-center text-muted py-4">ChÆ°a cÃ³ lá»‹ch sá»­</div>`
+            ? `<div class="text-center text-muted py-4">Chưa có lịch sử</div>`
             : results.map(r=>{
                 const d=new Date(r.timestamp);
                 const score = parseFloat(r.score).toFixed(2);
@@ -806,7 +806,7 @@
                     </div>
                     <div class="history-card-row">
                         <i class="fas fa-star history-card-icon"></i>
-                        <span class="history-card-label">Äiá»ƒm sá»‘</span>
+                        <span class="history-card-label">Điểm số</span>
                         <span class="badge ${badgeClass} history-card-score">${score}</span>
                     </div>
                 </div>`;
@@ -814,7 +814,7 @@
     }
 
     function clearData() {
-        if (confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a toÃ n bá»™ dá»¯ liá»‡u thá»‘ng kÃª?')) {
+        if (confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu thống kê?')) {
             ExamStorage.clearAll();
             location.reload();
         }
