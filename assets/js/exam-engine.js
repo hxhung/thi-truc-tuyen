@@ -342,36 +342,30 @@ function updateTimerDisplay(el) {
 // =====================================================
 // 3. NỘP BÀI VÀ TÍNH ĐIỂM
 // =====================================================
+// =====================================================
+// 3. NỘP BÀI VÀ TÍNH ĐIỂM (ĐÃ FIX LỖI TREO)
+// =====================================================
 window.finishExam = async function () {
-    if (submitted) return;
+    if (submitted) return; // Chống spam nút nộp
+    
+    // 1. BẬT MÀN HÌNH CHỜ (Overlay)
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
     
     // Ngừng đồng hồ
     if (timerInterval) clearInterval(timerInterval);
     submitted = true;
 
-    // Hiển thị loading
-    const btn = document.querySelector('.btn-submit');
-    if(btn) { btn.disabled = true; btn.innerText = 'Đang chấm điểm...'; }
-
-    // Tính điểm
-    const result = calculateScore();
-    console.log("Kết quả thi:", result);
-
     try {
-        // Gửi kết quả lên Google Sheet (nếu có API)
-        if (typeof sendResultToSheet === 'function') {
-            await sendResultToSheet({
-                ...sessionData,
-                score: result.finalScore,
-                detail: JSON.stringify(result.detail)
-            });
-        }
+        // 2. TÍNH ĐIỂM
+        // (Giả sử hàm calculateScore đã có trong file của bạn)
+        const result = calculateScore(); 
+        console.log("Kết quả chấm:", result);
 
-        // Lưu kết quả vào Session để trang result.html hiển thị
+        // 3. LƯU SESSION (Cho trang Result.html)
         sessionStorage.setItem('examResult', JSON.stringify(result));
 
-        // --- BẮT ĐẦU ĐOẠN LƯU LỊCH SỬ CHO THỐNG KÊ (STATISTICS.HTML) ---
-        // Đây là đoạn quan trọng để trang Thống kê không bị trắng
+        // 4. LƯU LỊCH SỬ (Cho trang Statistics.html)
         try {
             const historyItem = {
                 testName: sessionData.title || ("Mã đề: " + sessionData.examId),
@@ -384,22 +378,39 @@ window.finishExam = async function () {
             let history = [];
             const rawHistory = localStorage.getItem('math_master_history');
             if (rawHistory) history = JSON.parse(rawHistory);
-
+            
             history.push(historyItem);
             localStorage.setItem('math_master_history', JSON.stringify(history));
-            console.log("✅ Đã lưu lịch sử thi thành công!");
-        } catch (err) {
-            console.error("❌ Lỗi lưu lịch sử:", err);
+        } catch (histErr) {
+            console.warn("Lỗi lưu lịch sử (Không ảnh hưởng nộp bài):", histErr);
         }
-        // --- KẾT THÚC ĐOẠN LƯU LỊCH SỬ ---
 
-        // Chuyển sang trang kết quả
-        window.location.href = 'result.html';
+        // 5. GỬI GOOGLE SHEET (Nếu có)
+        // Dùng await nhưng bắt lỗi riêng để không chặn luồng chính
+        if (typeof sendResultToSheet === 'function') {
+            try {
+                await sendResultToSheet({
+                    ...sessionData,
+                    score: result.finalScore,
+                    detail: JSON.stringify(result.detail)
+                });
+            } catch (sheetErr) {
+                console.error("Lỗi gửi Sheet:", sheetErr);
+                // Vẫn cho qua để chuyển trang
+            }
+        }
+
+        // 6. CHUYỂN TRANG (Delay 1 xíu để người dùng thấy hiệu ứng chấm xong)
+        setTimeout(() => {
+            window.location.href = 'result.html';
+        }, 1000);
 
     } catch (e) {
-        alert('❌ Lỗi nộp bài: ' + e.message);
-        submitted = false;
-        if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
+        // NẾU CÓ LỖI LỚN (Vd: hàm tính điểm bị sai)
+        alert('⚠️ Có lỗi khi chấm điểm: ' + e.message + '\nHệ thống sẽ chuyển trang kết quả ngay.');
+        console.error(e);
+        // Vẫn cố gắng chuyển trang
+        window.location.href = 'result.html';
     }
 };
 
