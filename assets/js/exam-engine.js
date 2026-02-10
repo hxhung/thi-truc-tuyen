@@ -761,3 +761,88 @@ window.renderQuestions = function() {
         try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
     }
 };
+// =====================================================
+// LOGIC NỘP BÀI & KẾT NỐI SERVER (RESTORED)
+// =====================================================
+
+// Hàm này được gọi khi người dùng nhấn "Đồng ý" nộp bài hoặc hết giờ
+window.submitFinal = async function() {
+    // 1. Chặn nộp nhiều lần
+    if (submitted) return;
+    submitted = true; // Đánh dấu đã nộp
+    
+    // Dừng đồng hồ
+    if (timerInterval) clearInterval(timerInterval);
+    
+    // 2. Xử lý giao diện: Hiện thông báo "Đang chấm..."
+    const btnSubmit = document.querySelector('.btn-submit');
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<span class="spinner"></span> ĐANG CHẤM BÀI...';
+    }
+
+    // Ẩn modal xác nhận (nếu có)
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal) confirmModal.classList.add('hidden');
+
+    // 3. GỌI API CHẤM ĐIỂM (QUAN TRỌNG NHẤT)
+    try {
+        console.log("Đang gửi dữ liệu lên Server...");
+
+        // Kiểm tra xem hàm submitExam có tồn tại không (từ api-connector.js)
+        if (typeof submitExam !== 'function') {
+            throw new Error("Lỗi hệ thống: Không tìm thấy hàm kết nối Server (submitExam)");
+        }
+
+        // Gửi dữ liệu đi
+        const result = await submitExam({
+            examId: sessionData.examId,          // Mã đề
+            studentName: sessionData.studentName,// Tên HS
+            studentClass: sessionData.studentClass, // Lớp
+            answers: studentAnswers,             // Đáp án HS chọn { ID: "A", ... }
+            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft // Thời gian làm bài (giây)
+        });
+
+        // 4. Xử lý kết quả trả về
+        if (result.success) {
+            console.log("Nộp bài thành công!", result);
+            
+            // Xóa file lưu tạm (autosave) để tránh lỗi cho lần thi sau
+            localStorage.removeItem(`autosave_${sessionData.examId}`);
+            
+            // Lưu kết quả vào Session để trang result.html hiển thị
+            sessionStorage.setItem('examResult', JSON.stringify(result));
+            
+            // Chuyển trang ngay lập tức
+            window.location.href = 'result.html';
+        } else {
+            throw new Error(result.message || 'Server trả về lỗi không xác định');
+        }
+
+    } catch (e) {
+        console.error(e);
+        alert('❌ CÓ LỖI XẢY RA KHI NỘP BÀI:\n' + e.message + '\n\nVui lòng thử nộp lại hoặc báo giám thị!');
+        
+        // Mở lại nút nộp bài để thử lại
+        submitted = false;
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = 'NỘP BÀI LẠI';
+        }
+    }
+};
+
+// Hàm kích hoạt nộp bài (Nút NỘP BÀI gọi hàm này)
+window.finishExam = function() {
+    // Nếu đã nộp rồi thì thôi
+    if (submitted) return;
+
+    // Tính số câu đã làm
+    const totalQ = currentQuestions.length;
+    const answeredQ = Object.keys(studentAnswers).length;
+
+    // Hỏi xác nhận
+    if (confirm(`Bạn đã làm ${answeredQ}/${totalQ} câu.\nBạn có chắc chắn muốn nộp bài không?`)) {
+        submitFinal();
+    }
+};
