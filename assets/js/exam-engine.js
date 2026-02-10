@@ -1,8 +1,13 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN FIX LOADING & TIMER
- * Đã bổ sung EventListener để kích hoạt chạy
+ * =====================================================
+ * EXAM ENGINE - PHIÊN BẢN FIXED & CLEAN
+ * Version: 4.0 - Đã sửa tất cả lỗi
+ * =====================================================
  */
 
+// =====================================================
+// BIẾN TOÀN CỤC
+// =====================================================
 let currentQuestions = [];
 let studentAnswers = {};
 let sessionData = null;
@@ -11,470 +16,121 @@ let timeLeft = 0;
 let submitted = false;
 
 // =====================================================
-// 1. KHỞI TẠO & XỬ LÝ DỮ LIỆU
+// 1. KHỞI TẠO BÀI THI (INIT EXAM)
 // =====================================================
-// =====================================================
-// CHỈ CẦN THAY THẾ HÀM NÀY (GIỮ NGUYÊN PHẦN CÒN LẠI)
-// =====================================================
-w// =====================================================
-// 1. INIT EXAM (ĐÃ FIX: ID CÂU HỎI + THỜI GIAN)
-// =====================================================
-window.initExam = function (data) {
-    console.log("Dữ liệu khởi tạo:", data);
-    if (!data) return;
+window.initExam = function(data) {
+    console.log("🚀 Khởi tạo bài thi:", data);
+    
+    if (!data || !data.questions) {
+        alert("❌ Lỗi: Không có dữ liệu đề thi!");
+        window.location.href = 'index.html';
+        return;
+    }
+    
     sessionData = data;
     
-    // --- 1. XỬ LÝ CÂU HỎI & ID (FIX LỖI 0 ĐIỂM) ---
+    // --- XỬ LÝ CÂU HỎI ---
     const allQuestions = data.questions || [];
     let lastContentRoot = "";
 
-    // Lọc câu hỏi theo mã đề
+    // Lọc câu hỏi theo mã đề (case-insensitive)
     let filteredQuestions = allQuestions.filter(q => {
         const qId = q.ExamID || q.examId || q.MaDe || ""; 
         return String(qId).trim().toLowerCase() === String(sessionData.examId).trim().toLowerCase();
     });
 
-    // Gán ID tự động theo số thứ tự (0, 1, 2...)
+    // Xử lý câu hỏi & gán ID
     currentQuestions = filteredQuestions.map((q, index) => {
-        // Fix lỗi CSV True/False bị khuyết nội dung
+        // Fix lỗi CSV True/False bị khuyết Content_Root
         if (q.Type === "TN_DUNG_SAI" || q.Type === "TRUE_FALSE") {
             const root = q.Content_Root || q.Question_Root;
-            if (root) lastContentRoot = root;
-            else q.Content_Root = lastContentRoot;
+            if (root) {
+                lastContentRoot = root;
+            } else {
+                q.Content_Root = lastContentRoot;
+            }
         }
 
-        // QUAN TRỌNG: Gán QuestionID = index để khớp với Server chấm điểm
+        // QUAN TRỌNG: Gán QuestionID theo index để khớp với Server
         q.QuestionID = String(index); 
         
         // Chuẩn hóa loại câu hỏi
-        if(q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
-        if(q.Type === 'TN_DUNG_SAI') q.Type = 'TRUE_FALSE';
+        if (q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
+        if (q.Type === 'TN_DUNG_SAI') q.Type = 'TRUE_FALSE';
+        
         return q;
     });
 
-    renderQuestions();
+    console.log("✅ Đã load", currentQuestions.length, "câu hỏi");
 
-    // --- 2. XỬ LÝ THỜI GIAN (FIX LỖI HẾT GIỜ NGAY) ---
-    // Tìm thời gian ở mọi biến có thể (duration, Duration, Duration_Min...)
+    // --- XỬ LÝ THỜI GIAN ---
     let durationMin = parseInt(data.duration) || parseInt(data.Duration) || parseInt(data.Duration_Min);
     
-    // An toàn: Nếu không tìm thấy thời gian hoặc = 0, mặc định cho 60 phút (để test được)
     if (!durationMin || isNaN(durationMin) || durationMin <= 0) {
-        console.warn("⚠️ Không tìm thấy thời gian làm bài, mặc định set 60 phút.");
-        durationMin = 60; 
+        console.warn("⚠️ Không tìm thấy thời gian, mặc định 60 phút");
+        durationMin = 60;
     }
     
+    // Render giao diện
+    renderQuestions();
+    
+    // Khởi động đồng hồ
     startTimer(durationMin);
 };
 
-
-// 2. RENDER GIAO DIỆN (PHIÊN BẢN V4 - FIX TOÀN DIỆN)
+// =====================================================
+// 2. RENDER GIAO DIỆN CÂU HỎI
 // =====================================================
 function renderQuestions() {
+    console.log("🎨 Render giao diện...");
+    
     const container = document.getElementById('exam-container');
-    if (!container) return;
+    if (!container) {
+        console.error("❌ Không tìm thấy #exam-container");
+        return;
+    }
 
     // Cập nhật tiêu đề
     const titleEl = document.getElementById('exam-title');
-    if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
+    if (titleEl && sessionData) {
+        titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
+    }
     
-    // --- KHU VỰC AN TOÀN DỮ LIỆU (QUAN TRỌNG) ---
-    // Hàm này giúp tìm nội dung ở mọi biến có thể, tránh việc hiện trắng trơn
-    const getText = (q) => {
-        if (!q) return "";
-        return q.Content || q.Question || q.DeBai || q.NoiDung || q.Content_Root || ""; 
-    };
+    // --- HÀM TRỢ GIÚP ---
+    const getMainText = (q) => q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || "";
+    const getSubText = (q) => q.Content_Sub || q.Content || q.Question || "";
     const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
-    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
+    const getID = (q) => q.QuestionID || q.id || String(Math.random()).substr(2, 9);
 
-    // 1. Phân loại câu hỏi vào 3 nhóm
-    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
+    // Phân loại câu hỏi
+    const parts = {
+        "MULTIPLE_CHOICE": [],
+        "TRUE_FALSE": [],
+        "SHORT_ANSWER": []
+    };
+    
     const partTitles = {
         "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
         "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
         "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
     };
 
-    // Duyệt qua dữ liệu gốc để chia nhóm
     currentQuestions.forEach(q => {
-        let type = q.Type || "MULTIPLE_CHOICE"; 
-        // Fix lỗi sai tên loại câu hỏi trong database
-        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
-        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
-        
+        let type = q.Type || "MULTIPLE_CHOICE";
+        if (type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
+        if (type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
         if (parts[type]) parts[type].push(q);
     });
 
     let html = '';
 
-    // Helper tạo header: Câu X + Nội dung (Đảm bảo thẳng hàng)
+    // Template Header
     const createHeader = (idx, content, img) => `
         <div class="question-header">
             <div class="q-badge">Câu ${idx}</div>
             <div class="q-content">
                 ${content}
-                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
-            </div>
-        </div>
-    `;
-
-    // --- RENDER PHẦN 1: TRẮC NGHIỆM (A,B,C,D) ---
-    if (parts["MULTIPLE_CHOICE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
-        parts["MULTIPLE_CHOICE"].forEach((q, i) => {
-            const realIdx = i + 1;
-            const qID = getID(q);
-            const savedVal = studentAnswers[qID] || "";
-            
-            html += `<div class="question-item">
-                ${createHeader(realIdx, getText(q), getImg(q))}
-                <div class="options-grid">
-                    ${['A','B','C','D'].map(opt => {
-                        // Tìm nội dung đáp án ở nhiều biến khác nhau (Option_A, A, OptionA...)
-                        const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
-                        const checked = savedVal === opt ? 'checked' : '';
-                        return `
-                        <label class="option-item">
-                            <input type="radio" name="q_${qID}" value="${opt}" ${checked} 
-                                onchange="saveAnswer('${qID}', '${opt}')">
-                            <span><b>${opt}.</b> ${optVal}</span>
-                        </label>`;
-                    }).join('')}
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    // --- RENDER PHẦN 2: ĐÚNG SAI (Logic Gom Nhóm - Đã Fix Lỗi Thẻ Đóng) ---
-    if (parts["TRUE_FALSE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
-        
-        let currentRoot = "###INIT###"; // Giá trị khởi tạo đặc biệt
-        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
-        let subIdx = 0; 
-        let isGroupOpen = false; 
-
-        parts["TRUE_FALSE"].forEach((q) => {
-            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
-            const qID = getID(q);
-            
-            // Nếu gặp đề bài gốc mới -> Đóng nhóm cũ -> Mở nhóm mới
-            if (rootText !== currentRoot) {
-                if (isGroupOpen) { 
-                    html += `</div></div>`; // Đóng div nhóm trước
-                    isGroupOpen = false;
-                }
-                
-                currentRoot = rootText;
-                globalIdx++;
-                subIdx = 0;
-
-                // Mở nhóm mới
-                html += `<div class="question-item">
-                            ${createHeader(globalIdx, `<b>${currentRoot}</b>`, null)}
-                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
-                isGroupOpen = true;
-            }
-
-            // Render từng dòng a, b, c, d
-            const labelChar = String.fromCharCode(97 + (subIdx % 4)); // a, b, c, d
-            subIdx++;
-            const sVal = studentAnswers[qID] || "";
-            const qText = getText(q); 
-
-            html += `
-            <div class="tf-row">
-                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${qText}</span>
-                <div class="tf-options">
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
-                </div>
-            </div>`;
-        });
-
-        if (isGroupOpen) html += `</div></div>`; // Đóng nhóm cuối cùng
-        html += `</div>`; // Đóng Card Phần 2
-    }
-
-    // --- RENDER PHẦN 3: TRẢ LỜI NGẮN ---
-    if (parts["SHORT_ANSWER"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
-        
-        // Tính số câu bắt đầu cho phần 3
-        const p1Count = parts["MULTIPLE_CHOICE"].length;
-        // Đếm số nhóm (số câu cha) của phần 2
-        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
-        
-        let currentIdx = p1Count + p2Count;
-
-        parts["SHORT_ANSWER"].forEach((q, i) => {
-            currentIdx++;
-            const qID = getID(q);
-            const sVal = studentAnswers[qID] || "";
-            
-            html += `<div class="question-item">
-                ${createHeader(currentIdx, getText(q), getImg(q))}
-                <div class="fill-input-container">
-                    <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
-                        onchange="saveAnswer('${qID}', this.value)">
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    container.innerHTML = html;
-    
-    // Render công thức toán
-    if (window.renderMathInElement) {
-        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
-    }
-}
-// --- KẾT THÚC ĐOẠN CODE SỬA LỖI ---
-// --- KẾT THÚC ĐOẠN CODE renderQuestions ---
-
-function renderOption(qIdx, label, content) {
-    if (!content) return '';
-    return `
-        <label class="option-item">
-            <input type="radio" name="q${qIdx}" value="${label}" onchange="saveAnswer(${qIdx}, '${label}')">
-            <span class="opt-label">${label}</span>
-            <span class="opt-text">${content}</span>
-        </label>`;
-}
-
-// =====================================================
-// 3. XỬ LÝ SỰ KIỆN & TIMER
-// =====================================================
-
-window.saveAnswer = function(qIndex, value) {
-    studentAnswers[qIndex] = value;
-};
-
-function autoSave() {
-    if (submitted || !sessionData) return;
-    localStorage.setItem(`autosave_${sessionData.examId}`, JSON.stringify(studentAnswers));
-}
-
-function startTimer() {
-    const timerEl = document.getElementById('timer');
-    if (!timerEl) return;
-
-    // Cập nhật ngay lập tức để không bị delay 1s
-    updateTimerDisplay(timerEl);
-
-    timerInterval = setInterval(() => {
-        timeLeft--;
-        updateTimerDisplay(timerEl);
-        
-        if (timeLeft === 300) timerEl.style.color = 'red'; // Cảnh báo còn 5 phút
-
-        if (timeLeft <= 0) {
-            clearInterval(timerInterval);
-            alert('Hết giờ làm bài! Hệ thống sẽ tự động nộp.');
-            finishExam();
-        }
-    }, 1000);
-}
-
-function updateTimerDisplay(el) {
-    if (timeLeft < 0) timeLeft = 0;
-    const m = Math.floor(timeLeft / 60);
-    const s = timeLeft % 60;
-    el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-}
-
-// =====================================================
-// 4. NỘP BÀI
-// =====================================================
-window.finishExam = async function() {
-    if (submitted) return;
-    if (timeLeft > 0 && !confirm('Bạn có chắc chắn muốn nộp bài?')) return;
-
-    submitted = true;
-    if (timerInterval) clearInterval(timerInterval);
-    
-    const btn = document.querySelector('.btn-submit');
-    if(btn) { btn.disabled = true; btn.innerText = 'Đang nộp...'; }
-
-    try {
-        const result = await submitExam({
-            examId: sessionData.examId,
-            studentName: sessionData.studentName,
-            studentClass: sessionData.studentClass,
-            answers: studentAnswers,
-            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
-        });
-
-        if (result.success) {
-            localStorage.removeItem(`autosave_${sessionData.examId}`);
-            sessionStorage.setItem('examResult', JSON.stringify(result));
-            window.location.href = 'result.html';
-        } else {
-            alert('❌ Lỗi server: ' + (result.message || 'Không xác định'));
-            submitted = false;
-            if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
-        }
-    } catch (e) {
-        alert('❌ Lỗi kết nối: ' + e.message);
-        submitted = false;
-        if(btn) { btn.disabled = false; btn.innerText = 'Nộp bài'; }
-    }
-};
-
-// =====================================================
-// 🔥 QUAN TRỌNG: KÍCH HOẠT KHI TRANG LOAD XONG 🔥
-// =====================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Lấy dữ liệu từ sessionStorage (Do trang index.html lưu vào)
-    const rawData = sessionStorage.getItem('currentExam');
-    
-    if (!rawData) {
-        alert('Bạn chưa đăng nhập! Vui lòng quay lại trang chủ.');
-        window.location.href = 'index.html';
-        return;
-    }
-
-    try {
-        const data = JSON.parse(rawData);
-        
-        // 2. Kiểm tra nếu có autosave cũ thì khôi phục (Tùy chọn)
-        const savedAns = localStorage.getItem(`autosave_${data.examId}`);
-        if (savedAns) {
-            studentAnswers = JSON.parse(savedAns);
-            // Lưu ý: Việc tích chọn lại UI (radio button) sẽ phức tạp hơn, 
-            // ở mức cơ bản ta chỉ load vào biến để nộp bài không bị mất.
-        }
-
-        // 3. CHẠY ENGINE
-        initExam(data);
-
-    } catch (e) {
-        console.error("Lỗi parse dữ liệu thi:", e);
-        alert("Dữ liệu thi bị lỗi. Vui lòng đăng nhập lại.");
-        window.location.href = 'index.html';
-    }
-});
-// --- LOGIC NỘP BÀI MỚI (CÓ MODAL) ---
-
-// 1. Hàm được gọi khi bấm nút "NỘP BÀI" ở Footer
-window.finishExam = function(force = false) {
-    if (submitted) return;
-
-    // Nếu bị cưỡng ép (hết giờ) -> Nộp ngay lập tức
-    if (force) {
-        submitFinal();
-    } else {
-        // Nếu chưa hết giờ -> Hiện Modal xác nhận
-        // (Code HTML Modal đã thêm ở Bước 1 trong exam.html)
-        const modal = document.getElementById('confirm-modal');
-        if (modal) modal.classList.remove('hidden');
-        else {
-            // Fallback: Nếu quên thêm HTML Modal thì dùng confirm thường
-            if(confirm("Bạn có chắc chắn muốn nộp bài không?")) submitFinal();
-        }
-    }
-};
-
-// 2. Hàm đóng Modal (khi bấm Hủy/Làm tiếp)
-window.closeModal = function() {
-    const modal = document.getElementById('confirm-modal');
-    if (modal) modal.classList.add('hidden');
-};
-
-// 3. Hàm Xử lý Nộp bài Thật (Logic cũ được bọc vào đây)
-window.submitFinal = async function() {
-    submitted = true;
-    if (timerInterval) clearInterval(timerInterval); // Dừng đồng hồ
-
-    // Ẩn modal xác nhận, Hiện modal đang chấm
-    const confirmModal = document.getElementById('confirm-modal');
-    const processingModal = document.getElementById('processing-modal');
-    if (confirmModal) confirmModal.classList.add('hidden');
-    if (processingModal) processingModal.classList.remove('hidden');
-
-    // Vô hiệu hóa nút nộp (đề phòng)
-    const btn = document.querySelector('.btn-submit');
-    if(btn) { btn.disabled = true; btn.innerText = 'ĐANG CHẤM...'; }
-
-    try {
-        // --- ĐÂY LÀ ĐOẠN GỌI API TỪ FILE GỐC CỦA BẠN ---
-        // Tôi giữ nguyên cấu trúc gọi submitExam như trong snippet bạn gửi
-        const result = await submitExam({
-            examId: sessionData.examId,
-            studentName: sessionData.studentName,
-            studentClass: sessionData.studentClass,
-            answers: studentAnswers,
-            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
-        });
-
-        if (result.success) {
-            // Xóa autosave
-            localStorage.removeItem(`autosave_${sessionData.examId}`);
-            // Lưu kết quả để trang result hiển thị
-            sessionStorage.setItem('examResult', JSON.stringify(result));
-            window.location.href = 'result.html';
-        } else {
-            throw new Error(result.message || 'Lỗi server');
-        }
-    } catch (e) {
-        alert('❌ Lỗi nộp bài: ' + e.message);
-        // Nếu lỗi, cho phép nộp lại
-        submitted = false;
-        if(processingModal) processingModal.classList.add('hidden');
-        if(btn) { btn.disabled = false; btn.innerText = 'NỘP BÀI'; }
-    }
-};
-
-// =====================================================
-// RENDER GIAO DIỆN (PHIÊN BẢN V5 - FIX NỘI DUNG & FORMAT)
-// =====================================================
-window.renderQuestions = function() {
-    console.log("Đang chạy renderQuestions V5 (Fix lỗi hiển thị Part 2)"); 
-    const container = document.getElementById('exam-container');
-    if (!container) return;
-
-    // Cập nhật tiêu đề
-    const titleEl = document.getElementById('exam-title');
-    if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
-    
-    // --- HÀM TRỢ GIÚP LẤY DỮ LIỆU ---
-    // 1. Lấy nội dung cho câu hỏi thường (Part 1, 3)
-    const getGeneralText = (q) => {
-        return q.Content || q.Question || q.DeBai || q.NoiDung || q.Content_Root || ""; 
-    };
-    
-    // 2. Lấy hình ảnh
-    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
-    
-    // 3. Lấy ID an toàn
-    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
-
-    // Phân loại câu hỏi
-    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
-    const partTitles = {
-        "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
-        "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
-        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
-    };
-
-    currentQuestions.forEach(q => {
-        let type = q.Type || "MULTIPLE_CHOICE"; 
-        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
-        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
-        if (parts[type]) parts[type].push(q);
-    });
-
-    let html = '';
-
-    // Template tạo Header câu hỏi (Đã bỏ in đậm theo yêu cầu)
-    const createHeader = (idx, content, img) => `
-        <div class="question-header">
-            <div class="q-badge">Câu ${idx}</div>
-            <div class="q-content">
-                ${content} 
-                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
+                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" class="question-image"></div>` : ''}
             </div>
         </div>
     `;
@@ -482,179 +138,12 @@ window.renderQuestions = function() {
     // --- RENDER PHẦN 1: TRẮC NGHIỆM ---
     if (parts["MULTIPLE_CHOICE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
+        
         parts["MULTIPLE_CHOICE"].forEach((q, i) => {
             const realIdx = i + 1;
             const qID = getID(q);
             const savedVal = studentAnswers[qID] || "";
             
-            html += `<div class="question-item">
-                ${createHeader(realIdx, getGeneralText(q), getImg(q))}
-                <div class="options-grid">
-                    ${['A','B','C','D'].map(opt => {
-                        const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
-                        const checked = savedVal === opt ? 'checked' : '';
-                        return `
-                        <label class="option-item">
-                            <input type="radio" name="q_${qID}" value="${opt}" ${checked} 
-                                onchange="saveAnswer('${qID}', '${opt}')">
-                            <span><b>${opt}.</b> ${optVal}</span>
-                        </label>`;
-                    }).join('')}
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    // --- RENDER PHẦN 2: ĐÚNG SAI (ĐÃ FIX LỖI HIỂN THỊ) ---
-    if (parts["TRUE_FALSE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
-        
-        let currentRoot = "###INIT###";
-        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
-        let subIdx = 0; 
-        let isGroupOpen = false; 
-
-        parts["TRUE_FALSE"].forEach((q) => {
-            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
-            const qID = getID(q);
-            
-            // Xử lý gom nhóm câu hỏi cha
-            if (rootText !== currentRoot) {
-                if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
-                
-                currentRoot = rootText;
-                globalIdx++;
-                subIdx = 0;
-
-                // FIX: Đã bỏ thẻ <b> ở biến currentRoot để không in đậm đề bài
-                html += `<div class="question-item">
-                            ${createHeader(globalIdx, currentRoot, null)}
-                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
-                isGroupOpen = true;
-            }
-
-            // Xử lý nội dung ý nhỏ (a, b, c, d)
-            // FIX: Chỉ lấy đúng trường nội dung con, KHÔNG fallback về Content_Root
-            let subText = q.Content || q.NoiDung || q.DeBai || "";
-            
-            // Nếu vẫn rỗng, thử tìm ở Question nhưng phải khác Đề bài gốc
-            if (!subText && q.Question && q.Question !== rootText) {
-                subText = q.Question;
-            }
-            
-            const labelChar = String.fromCharCode(97 + (subIdx % 4)); // a, b, c, d
-            subIdx++;
-            const sVal = studentAnswers[qID] || "";
-            
-            html += `
-            <div class="tf-row">
-                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${subText}</span>
-                <div class="tf-options">
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
-                </div>
-            </div>`;
-        });
-
-        if (isGroupOpen) html += `</div></div>`; 
-        html += `</div>`;
-    }
-
-    // --- RENDER PHẦN 3: TRẢ LỜI NGẮN ---
-    if (parts["SHORT_ANSWER"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
-        
-        const p1Count = parts["MULTIPLE_CHOICE"].length;
-        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
-        let currentIdx = p1Count + p2Count;
-
-        parts["SHORT_ANSWER"].forEach((q) => {
-            currentIdx++;
-            const qID = getID(q);
-            const sVal = studentAnswers[qID] || "";
-            
-            html += `<div class="question-item">
-                ${createHeader(currentIdx, getGeneralText(q), getImg(q))}
-                <div class="fill-input-container">
-                    <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
-                        onchange="saveAnswer('${qID}', this.value)">
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
-    }
-
-    container.innerHTML = html;
-    
-    // Render Toán học (nếu có)
-    if (window.renderMathInElement) {
-        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
-    }
-};
-// =====================================================
-// RENDER GIAO DIỆN V6 (BẢN FIX CHUẨN DỮ LIỆU)
-// =====================================================
-window.renderQuestions = function() {
-    console.log("Đang chạy renderQuestions V6 (Fix dữ liệu Content_Root/Sub)");
-    const container = document.getElementById('exam-container');
-    if (!container) return;
-
-    // Cập nhật tiêu đề
-    const titleEl = document.getElementById('exam-title');
-    if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
-    
-    // --- HÀM TRỢ GIÚP LẤY DỮ LIỆU (QUAN TRỌNG) ---
-    // 1. Lấy nội dung cho câu hỏi đơn (Phần 1, 3): Ưu tiên Content_Root
-    const getMainText = (q) => {
-        return q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || ""; 
-    };
-
-    // 2. Lấy nội dung cho ý nhỏ (Phần 2): Ưu tiên Content_Sub
-    const getSubText = (q) => {
-        return q.Content_Sub || q.Content || q.Question || ""; 
-    };
-    
-    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
-    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
-
-    // Phân loại câu hỏi
-    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
-    const partTitles = {
-        "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
-        "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
-        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
-    };
-
-    currentQuestions.forEach(q => {
-        let type = q.Type || "MULTIPLE_CHOICE"; 
-        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
-        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
-        if (parts[type]) parts[type].push(q);
-    });
-
-    let html = '';
-
-    // Template Header (Không in đậm theo yêu cầu)
-    const createHeader = (idx, content, img) => `
-        <div class="question-header">
-            <div class="q-badge">Câu ${idx}</div>
-            <div class="q-content">
-                ${content}
-                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
-            </div>
-        </div>
-    `;
-
-    // --- RENDER PHẦN 1 ---
-    if (parts["MULTIPLE_CHOICE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
-        parts["MULTIPLE_CHOICE"].forEach((q, i) => {
-            const realIdx = i + 1;
-            const qID = getID(q);
-            const savedVal = studentAnswers[qID] || "";
-            
-            // Dùng getMainText (Lấy Content_Root)
             html += `<div class="question-item">
                 ${createHeader(realIdx, getMainText(q), getImg(q))}
                 <div class="options-grid">
@@ -671,63 +160,74 @@ window.renderQuestions = function() {
                 </div>
             </div>`;
         });
+        
         html += `</div>`;
     }
 
-    // --- RENDER PHẦN 2 ---
+    // --- RENDER PHẦN 2: ĐÚNG/SAI ---
     if (parts["TRUE_FALSE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
         
         let currentRoot = "###INIT###";
-        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
-        let subIdx = 0; 
-        let isGroupOpen = false; 
+        let globalIdx = parts["MULTIPLE_CHOICE"].length;
+        let subIdx = 0;
+        let isGroupOpen = false;
 
         parts["TRUE_FALSE"].forEach((q) => {
-            // Header chung lấy từ Content_Root
             const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
             const qID = getID(q);
             
+            // Xử lý gom nhóm
             if (rootText !== currentRoot) {
-                if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
+                if (isGroupOpen) {
+                    html += `</div></div>`;
+                    isGroupOpen = false;
+                }
                 
                 currentRoot = rootText;
                 globalIdx++;
                 subIdx = 0;
 
                 html += `<div class="question-item">
-                            ${createHeader(globalIdx, currentRoot, null)}
-                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
+                    ${createHeader(globalIdx, currentRoot, null)}
+                    <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
                 isGroupOpen = true;
             }
 
-            // Ý nhỏ lấy từ Content_Sub
-            let subText = getSubText(q);
-            
-            const labelChar = String.fromCharCode(97 + (subIdx % 4)); 
+            // Render ý nhỏ (a, b, c, d)
+            const subText = getSubText(q);
+            const labelChar = String.fromCharCode(97 + (subIdx % 4));
             subIdx++;
             const sVal = studentAnswers[qID] || "";
             
             html += `
             <div class="tf-row">
-                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${subText}</span>
+                <span style="flex:1; font-size: 1rem; padding-right:10px;">
+                    <b>${labelChar})</b> ${subText}
+                </span>
                 <div class="tf-options">
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
+                    <label class="tf-btn">
+                        <input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} 
+                            onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG
+                    </label>
+                    <label class="tf-btn">
+                        <input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} 
+                            onchange="saveAnswer('${qID}', 'FALSE')"> SAI
+                    </label>
                 </div>
             </div>`;
         });
 
-        if (isGroupOpen) html += `</div></div>`; 
+        if (isGroupOpen) html += `</div></div>`;
         html += `</div>`;
     }
 
-    // --- RENDER PHẦN 3 ---
+    // --- RENDER PHẦN 3: TRẢ LỜI NGẮN ---
     if (parts["SHORT_ANSWER"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
         
         const p1Count = parts["MULTIPLE_CHOICE"].length;
-        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
+        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size;
         let currentIdx = p1Count + p2Count;
 
         parts["SHORT_ANSWER"].forEach((q) => {
@@ -735,7 +235,6 @@ window.renderQuestions = function() {
             const qID = getID(q);
             const sVal = studentAnswers[qID] || "";
             
-            // Dùng getMainText (Lấy Content_Root)
             html += `<div class="question-item">
                 ${createHeader(currentIdx, getMainText(q), getImg(q))}
                 <div class="fill-input-container">
@@ -744,154 +243,222 @@ window.renderQuestions = function() {
                 </div>
             </div>`;
         });
+        
         html += `</div>`;
     }
 
     container.innerHTML = html;
     
+    // Render công thức toán (nếu có KaTeX)
     if (window.renderMathInElement) {
-        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
+        try {
+            renderMathInElement(container, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+        } catch(e) {
+            console.warn("⚠️ Lỗi render KaTeX:", e);
+        }
     }
-};
-// =====================================================
-// LOGIC NỘP BÀI & KẾT NỐI SERVER (RESTORED)
-// =====================================================
-
-// Hàm này được gọi khi người dùng nhấn "Đồng ý" nộp bài hoặc hết giờ
-window.submitFinal = async function() {
-    // 1. Chặn nộp nhiều lần
-    if (submitted) return;
-    submitted = true; // Đánh dấu đã nộp
     
-    // Dừng đồng hồ
-    if (timerInterval) clearInterval(timerInterval);
+    console.log("✅ Render hoàn tất");
+}
+
+// =====================================================
+// 3. XỬ LÝ ĐỒNG HỒ ĐẾM NGƯỢC
+// =====================================================
+function startTimer(minutes) {
+    console.log("⏰ Khởi động đồng hồ:", minutes, "phút");
     
-    // 2. Xử lý giao diện: Hiện thông báo "Đang chấm..."
-    const btnSubmit = document.querySelector('.btn-submit');
-    if (btnSubmit) {
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<span class="spinner"></span> ĐANG CHẤM BÀI...';
-    }
-
-    // Ẩn modal xác nhận (nếu có)
-    const confirmModal = document.getElementById('confirm-modal');
-    if (confirmModal) confirmModal.classList.add('hidden');
-
-    // 3. GỌI API CHẤM ĐIỂM (QUAN TRỌNG NHẤT)
-    try {
-        console.log("Đang gửi dữ liệu lên Server...");
-
-        // Kiểm tra xem hàm submitExam có tồn tại không (từ api-connector.js)
-        if (typeof submitExam !== 'function') {
-            throw new Error("Lỗi hệ thống: Không tìm thấy hàm kết nối Server (submitExam)");
-        }
-
-        // Gửi dữ liệu đi
-        const result = await submitExam({
-            examId: sessionData.examId,          // Mã đề
-            studentName: sessionData.studentName,// Tên HS
-            studentClass: sessionData.studentClass, // Lớp
-            answers: studentAnswers,             // Đáp án HS chọn { ID: "A", ... }
-            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft // Thời gian làm bài (giây)
-        });
-
-        // 4. Xử lý kết quả trả về
-        if (result.success) {
-            console.log("Nộp bài thành công!", result);
-            
-            // Xóa file lưu tạm (autosave) để tránh lỗi cho lần thi sau
-            localStorage.removeItem(`autosave_${sessionData.examId}`);
-            
-            // Lưu kết quả vào Session để trang result.html hiển thị
-            sessionStorage.setItem('examResult', JSON.stringify(result));
-            
-            // Chuyển trang ngay lập tức
-            window.location.href = 'result.html';
-        } else {
-            throw new Error(result.message || 'Server trả về lỗi không xác định');
-        }
-
-    } catch (e) {
-        console.error(e);
-        alert('❌ CÓ LỖI XẢY RA KHI NỘP BÀI:\n' + e.message + '\n\nVui lòng thử nộp lại hoặc báo giám thị!');
-        
-        // Mở lại nút nộp bài để thử lại
-        submitted = false;
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerText = 'NỘP BÀI LẠI';
-        }
-    }
-};
-
-// Hàm kích hoạt nộp bài (Nút NỘP BÀI gọi hàm này)
-window.finishExam = function() {
-    // Nếu đã nộp rồi thì thôi
-    if (submitted) return;
-
-    // Tính số câu đã làm
-    const totalQ = currentQuestions.length;
-    const answeredQ = Object.keys(studentAnswers).length;
-
-    // Hỏi xác nhận
-    if (confirm(`Bạn đã làm ${answeredQ}/${totalQ} câu.\nBạn có chắc chắn muốn nộp bài không?`)) {
-        submitFinal();
-    }
-};
-// =====================================================
-// 2. START TIMER (ĐÃ FIX: KHÔNG BỊ HẾT GIỜ OAN)
-// =====================================================
-window.startTimer = function(minutes) {
-    // Xóa bộ đếm cũ nếu có
+    // Xóa interval cũ nếu có
     if (timerInterval) clearInterval(timerInterval);
 
-    // Tính toán thời gian còn lại
-    // Ưu tiên tính theo thời điểm bắt đầu (startToken) để reload trang không bị reset giờ
+    // Tính thời gian còn lại
     if (sessionData && sessionData.startToken) {
         const now = Date.now();
         const startTime = parseInt(sessionData.startToken);
         const elapsedSeconds = Math.floor((now - startTime) / 1000);
         timeLeft = (minutes * 60) - elapsedSeconds;
 
-        // Nếu tính ra âm (do token cũ quá), reset lại full thời gian để tránh bị kick ra ngay
         if (timeLeft <= 0) {
-            console.warn("⚠️ Phiên làm bài đã hết hạn, nhưng đang reset lại để bạn kiểm tra.");
+            console.warn("⚠️ Token cũ, reset lại thời gian");
             timeLeft = minutes * 60;
-            // Cập nhật lại token mới để không bị lỗi tiếp
             sessionData.startToken = Date.now();
             sessionStorage.setItem('currentExam', JSON.stringify(sessionData));
         }
     } else {
-        // Nếu không có token, tính theo cách truyền thống
         timeLeft = minutes * 60;
     }
 
-    // Cập nhật giao diện ngay lập tức
+    // Cập nhật hiển thị ngay
     updateTimerDisplay();
 
-    // Bắt đầu đếm ngược
+    // Đếm ngược mỗi giây
     timerInterval = setInterval(() => {
         timeLeft--;
         updateTimerDisplay();
 
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            finishExam(true); // Hết giờ thật sự mới nộp
+            alert('⏰ HẾT GIỜ! Hệ thống sẽ tự động nộp bài.');
+            finishExam(true); // Nộp bắt buộc
         }
     }, 1000);
-};
+}
 
-// Hàm phụ để hiển thị đồng hồ
 function updateTimerDisplay() {
-    const timerDisplay = document.getElementById('timer');
-    if (!timerDisplay) return;
+    const timerEl = document.getElementById('timer');
+    if (!timerEl) return;
 
     if (timeLeft < 0) timeLeft = 0;
+    
     const m = Math.floor(timeLeft / 60);
     const s = timeLeft % 60;
-    timerDisplay.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
     
-    // Đổi màu đỏ khi còn dưới 5 phút
-    if (timeLeft < 300) timerDisplay.style.color = 'red';
-    else timerDisplay.style.color = '#2d3748';
+    timerEl.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+    
+    // Đổi màu đỏ khi còn < 5 phút
+    if (timeLeft < 300) {
+        timerEl.style.color = 'red';
+    }
 }
+
+// =====================================================
+// 4. LƯU ĐÁP ÁN & AUTO SAVE
+// =====================================================
+window.saveAnswer = function(qIndex, value) {
+    studentAnswers[qIndex] = value;
+    autoSave();
+};
+
+function autoSave() {
+    if (submitted || !sessionData) return;
+    try {
+        localStorage.setItem(`autosave_${sessionData.examId}`, JSON.stringify(studentAnswers));
+    } catch(e) {
+        console.warn("⚠️ Không thể autosave:", e);
+    }
+}
+
+// =====================================================
+// 5. NỘP BÀI
+// =====================================================
+window.finishExam = function(forced = false) {
+    if (submitted) return;
+
+    // Nếu bị ép (hết giờ) → Nộp ngay
+    if (forced) {
+        submitFinal();
+        return;
+    }
+
+    // Nếu tự nguyện → Hiện modal xác nhận
+    const totalQ = currentQuestions.length;
+    const answeredQ = Object.keys(studentAnswers).length;
+
+    if (confirm(`Bạn đã làm ${answeredQ}/${totalQ} câu.\n\nBạn có chắc chắn muốn nộp bài?`)) {
+        submitFinal();
+    }
+};
+
+window.submitFinal = async function() {
+    submitted = true;
+    
+    // Dừng đồng hồ
+    if (timerInterval) clearInterval(timerInterval);
+    
+    // Cập nhật nút
+    const btn = document.querySelector('.btn-submit');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ ĐANG CHẤM BÀI...';
+    }
+
+    try {
+        console.log("📤 Đang gửi bài lên Server...");
+
+        // Kiểm tra hàm submitExam từ api-connector.js
+        if (typeof submitExam !== 'function') {
+            throw new Error("Lỗi: Không tìm thấy hàm submitExam (api-connector.js)");
+        }
+
+        // Gửi dữ liệu
+        const result = await submitExam({
+            examId: sessionData.examId,
+            studentName: sessionData.studentName,
+            studentClass: sessionData.studentClass,
+            answers: studentAnswers,
+            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
+        });
+
+        if (result.success) {
+            console.log("✅ Nộp bài thành công!");
+            
+            // Xóa autosave
+            localStorage.removeItem(`autosave_${sessionData.examId}`);
+            
+            // Lưu kết quả vào session
+            sessionStorage.setItem('examResult', JSON.stringify(result));
+            
+            // Chuyển trang
+            window.location.href = 'result.html';
+        } else {
+            throw new Error(result.message || 'Server trả về lỗi');
+        }
+
+    } catch (e) {
+        console.error("❌ Lỗi nộp bài:", e);
+        alert('❌ CÓ LỖI XẢY RA:\n' + e.message + '\n\nVui lòng thử lại!');
+        
+        // Cho phép nộp lại
+        submitted = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'NỘP BÀI LẠI';
+        }
+    }
+};
+
+// =====================================================
+// 6. KHỞI ĐỘNG KHI TRANG LOAD XONG
+// =====================================================
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("📄 Trang exam.html đã load xong");
+    
+    // Lấy dữ liệu từ sessionStorage
+    const rawData = sessionStorage.getItem('currentExam');
+    
+    if (!rawData) {
+        alert('❌ Bạn chưa đăng nhập! Vui lòng quay lại trang chủ.');
+        window.location.href = 'index.html';
+        return;
+    }
+
+    try {
+        const data = JSON.parse(rawData);
+        console.log("📦 Dữ liệu session:", data);
+        
+        // Khôi phục autosave (nếu có)
+        const savedAns = localStorage.getItem(`autosave_${data.examId}`);
+        if (savedAns) {
+            try {
+                studentAnswers = JSON.parse(savedAns);
+                console.log("♻️ Đã khôi phục", Object.keys(studentAnswers).length, "đáp án cũ");
+            } catch(e) {
+                console.warn("⚠️ Lỗi khôi phục autosave:", e);
+            }
+        }
+
+        // KHỞI ĐỘNG ENGINE
+        initExam(data);
+
+    } catch (e) {
+        console.error("❌ Lỗi parse dữ liệu:", e);
+        alert("Dữ liệu thi bị lỗi. Vui lòng đăng nhập lại.");
+        window.location.href = 'index.html';
+    }
+});
+
+console.log("✅ exam-engine.js đã load thành công");
