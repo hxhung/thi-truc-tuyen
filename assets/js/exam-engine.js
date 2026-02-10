@@ -434,11 +434,12 @@ window.submitFinal = async function() {
         if(btn) { btn.disabled = false; btn.innerText = 'NỘP BÀI'; }
     }
 };
+
 // =====================================================
-// RENDER GIAO DIỆN V4 (DÁN VÀO CUỐI CÙNG FILE ĐỂ FIX LỖI)
+// RENDER GIAO DIỆN (PHIÊN BẢN V5 - FIX NỘI DUNG & FORMAT)
 // =====================================================
 window.renderQuestions = function() {
-    console.log("Đang chạy renderQuestions V4 (Bản chuẩn)"); // Log kiểm tra
+    console.log("Đang chạy renderQuestions V5 (Fix lỗi hiển thị Part 2)"); 
     const container = document.getElementById('exam-container');
     if (!container) return;
 
@@ -446,12 +447,16 @@ window.renderQuestions = function() {
     const titleEl = document.getElementById('exam-title');
     if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
     
-    // Hàm an toàn để lấy nội dung (tránh bị null/undefined làm mất đề)
-    const getText = (q) => {
-        if (!q) return "";
+    // --- HÀM TRỢ GIÚP LẤY DỮ LIỆU ---
+    // 1. Lấy nội dung cho câu hỏi thường (Part 1, 3)
+    const getGeneralText = (q) => {
         return q.Content || q.Question || q.DeBai || q.NoiDung || q.Content_Root || ""; 
     };
+    
+    // 2. Lấy hình ảnh
     const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
+    
+    // 3. Lấy ID an toàn
     const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
 
     // Phân loại câu hỏi
@@ -471,18 +476,18 @@ window.renderQuestions = function() {
 
     let html = '';
 
-    // Helper tạo header
+    // Template tạo Header câu hỏi (Đã bỏ in đậm theo yêu cầu)
     const createHeader = (idx, content, img) => `
         <div class="question-header">
             <div class="q-badge">Câu ${idx}</div>
             <div class="q-content">
-                ${content}
+                ${content} 
                 ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
             </div>
         </div>
     `;
 
-    // --- RENDER PHẦN 1 ---
+    // --- RENDER PHẦN 1: TRẮC NGHIỆM ---
     if (parts["MULTIPLE_CHOICE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
         parts["MULTIPLE_CHOICE"].forEach((q, i) => {
@@ -491,7 +496,7 @@ window.renderQuestions = function() {
             const savedVal = studentAnswers[qID] || "";
             
             html += `<div class="question-item">
-                ${createHeader(realIdx, getText(q), getImg(q))}
+                ${createHeader(realIdx, getGeneralText(q), getImg(q))}
                 <div class="options-grid">
                     ${['A','B','C','D'].map(opt => {
                         const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
@@ -509,7 +514,7 @@ window.renderQuestions = function() {
         html += `</div>`;
     }
 
-    // --- RENDER PHẦN 2 (FIX LỖI THẺ ĐÓNG) ---
+    // --- RENDER PHẦN 2: ĐÚNG SAI (ĐÃ FIX LỖI HIỂN THỊ) ---
     if (parts["TRUE_FALSE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
         
@@ -522,6 +527,7 @@ window.renderQuestions = function() {
             const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
             const qID = getID(q);
             
+            // Xử lý gom nhóm câu hỏi cha
             if (rootText !== currentRoot) {
                 if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
                 
@@ -529,19 +535,29 @@ window.renderQuestions = function() {
                 globalIdx++;
                 subIdx = 0;
 
+                // FIX: Đã bỏ thẻ <b> ở biến currentRoot để không in đậm đề bài
                 html += `<div class="question-item">
-                            ${createHeader(globalIdx, `<b>${currentRoot}</b>`, null)}
+                            ${createHeader(globalIdx, currentRoot, null)}
                             <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
                 isGroupOpen = true;
             }
 
-            const labelChar = String.fromCharCode(97 + (subIdx % 4)); 
+            // Xử lý nội dung ý nhỏ (a, b, c, d)
+            // FIX: Chỉ lấy đúng trường nội dung con, KHÔNG fallback về Content_Root
+            let subText = q.Content || q.NoiDung || q.DeBai || "";
+            
+            // Nếu vẫn rỗng, thử tìm ở Question nhưng phải khác Đề bài gốc
+            if (!subText && q.Question && q.Question !== rootText) {
+                subText = q.Question;
+            }
+            
+            const labelChar = String.fromCharCode(97 + (subIdx % 4)); // a, b, c, d
             subIdx++;
             const sVal = studentAnswers[qID] || "";
             
             html += `
             <div class="tf-row">
-                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${getText(q)}</span>
+                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${subText}</span>
                 <div class="tf-options">
                     <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
                     <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
@@ -553,7 +569,7 @@ window.renderQuestions = function() {
         html += `</div>`;
     }
 
-    // --- RENDER PHẦN 3 (FIX MẤT CÂU HỎI) ---
+    // --- RENDER PHẦN 3: TRẢ LỜI NGẮN ---
     if (parts["SHORT_ANSWER"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
         
@@ -567,7 +583,7 @@ window.renderQuestions = function() {
             const sVal = studentAnswers[qID] || "";
             
             html += `<div class="question-item">
-                ${createHeader(currentIdx, getText(q), getImg(q))}
+                ${createHeader(currentIdx, getGeneralText(q), getImg(q))}
                 <div class="fill-input-container">
                     <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
                         onchange="saveAnswer('${qID}', this.value)">
@@ -578,6 +594,8 @@ window.renderQuestions = function() {
     }
 
     container.innerHTML = html;
+    
+    // Render Toán học (nếu có)
     if (window.renderMathInElement) {
         try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
     }
