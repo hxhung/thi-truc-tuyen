@@ -1,6 +1,6 @@
 /**
  * =====================================================
- * EXAM ENGINE - PHIÊN BẢN FINAL (ĐÃ FIX LỖI CÚ PHÁP)
+ * EXAM ENGINE - PHIÊN BẢN FINAL (ĐÃ FIX SYNTAX & TRÙNG LẶP)
  * =====================================================
  */
 
@@ -54,6 +54,8 @@ window.initExam = function(data) {
         return q;
     });
 
+    console.log("✅ Đã load", currentQuestions.length, "câu hỏi");
+
     // --- XỬ LÝ THỜI GIAN ---
     let durationMin = parseInt(data.duration) || parseInt(data.Duration) || parseInt(data.Duration_Min);
     if (!durationMin || isNaN(durationMin) || durationMin <= 0) {
@@ -77,13 +79,11 @@ function renderQuestions() {
         titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
     }
     
-    // Helper functions
     const getMainText = (q) => q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || "";
     const getSubText = (q) => q.Content_Sub || q.Content || q.Question || "";
     const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
     const getID = (q) => q.QuestionID;
 
-    // Phân loại
     const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
     const partTitles = {
         "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
@@ -191,7 +191,7 @@ function renderQuestions() {
 }
 
 // =====================================================
-// 3. XỬ LÝ ĐỒNG HỒ & HẾT GIỜ (Đã Fix Syntax)
+// 3. XỬ LÝ ĐỒNG HỒ & HẾT GIỜ
 // =====================================================
 function startTimer(minutes) {
     if (timerInterval) clearInterval(timerInterval);
@@ -248,7 +248,7 @@ function startTimer(minutes) {
                 }
             }, 1000);
         }
-    }, 1000); // <-- Đã thêm đóng ngoặc đúng
+    }, 1000); 
 }
 
 function updateTimerDisplay() {
@@ -262,7 +262,7 @@ function updateTimerDisplay() {
 }
 
 // =====================================================
-// 4. LƯU & NỘP BÀI (Đã loại bỏ hàm trùng)
+// 4. LƯU & NỘP BÀI
 // =====================================================
 window.saveAnswer = function(qIndex, value) {
     studentAnswers[qIndex] = value;
@@ -274,11 +274,13 @@ window.saveAnswer = function(qIndex, value) {
 window.finishExam = function(forced = false) {
     if (submitted) return;
     
+    // Nếu bị ép buộc (do hết giờ) -> Gọi nộp luôn
     if (forced === true) {
         submitFinal();
         return;
     }
 
+    // Nếu người dùng bấm -> Hiện modal xác nhận (ID khớp với exam.html)
     const modal = document.getElementById('confirm-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -289,11 +291,12 @@ window.finishExam = function(forced = false) {
 };
 
 window.closeModal = function() {
-    document.getElementById('confirm-modal').classList.add('hidden');
+    const modal = document.getElementById('confirm-modal');
+    if(modal) modal.classList.add('hidden');
     document.body.style.overflow = 'auto';
 };
 
-// Hàm nộp bài chính (Chỉ giữ lại 1 hàm duy nhất này)
+// HÀM NỘP BÀI DUY NHẤT (Đã tích hợp Modal Processing)
 window.submitFinal = async function() {
     if (submitted) return;
     submitted = true;
@@ -301,14 +304,15 @@ window.submitFinal = async function() {
     if (timerInterval) clearInterval(timerInterval);
 
     // Ẩn modal xác nhận
-    if(document.getElementById('confirm-modal')) 
-        document.getElementById('confirm-modal').classList.add('hidden');
+    const confirmModal = document.getElementById('confirm-modal');
+    if(confirmModal) confirmModal.classList.add('hidden');
     
-    // Hiện modal đang chấm
+    // Hiện modal đang chấm (ID khớp với exam.html)
     const procModal = document.getElementById('processing-modal');
     if (procModal) procModal.classList.remove('hidden');
 
     try {
+        // Gọi API
         const result = await submitExam({
             examId: sessionData.examId,
             studentName: sessionData.studentName,
@@ -329,6 +333,7 @@ window.submitFinal = async function() {
         if (procModal) procModal.classList.add('hidden');
         alert('❌ Lỗi: ' + e.message + '\nẤn OK để thử nộp lại.');
         submitted = false; 
+        document.body.style.overflow = 'auto';
     }
 };
 
