@@ -32,5 +32,23 @@
 
     <script src="assets/js/api-connector.js"></script>
     <script src="assets/js/exam-engine.js"></script>
+	<div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3 style="color: #d9534f;">⚠️ Xác nhận nộp bài?</h3>
+            <p>Bạn vẫn còn thời gian. Bạn có chắc chắn muốn nộp bài không?</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Làm tiếp</button>
+                <button class="btn-confirm" onclick="submitFinal()">Nộp ngay</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="processing-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="spinner"></div>
+            <h3 style="color: #4a90e2; margin-top:15px;">Đang chấm bài...</h3>
+            <p>Vui lòng không tắt trình duyệt.</p>
+        </div>
+    </div>
 </body>
 </html>
