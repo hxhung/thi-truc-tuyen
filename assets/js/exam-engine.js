@@ -89,7 +89,7 @@ function renderQuestions() {
     const p1 = currentQuestions.filter(q => q.Type === 'MULTIPLE_CHOICE');
     if (p1.length > 0) {
         // Thẻ tiêu đề Phần 1
-        container.innerHTML += `<div class="part-header">PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN</div>`;
+        container.innerHTML += `<div class="part-header">PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN (3 điểm)</div>`;
         
         p1.forEach((q, index) => {
             const qIndex = currentQuestions.indexOf(q); 
@@ -122,7 +122,7 @@ function renderQuestions() {
         });
 
         // Thẻ tiêu đề Phần 2
-        container.innerHTML += `<div class="part-header">PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI</div>`;
+        container.innerHTML += `<div class="part-header">PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI (4 điểm)</div>`;
         
         let groupCount = 1;
         for (const [content, items] of Object.entries(groups)) {
@@ -155,7 +155,7 @@ function renderQuestions() {
     const p3 = currentQuestions.filter(q => q.Type === 'FILL_IN' || q.Type === 'SHORT_ANSWER');
     if (p3.length > 0) {
         // Thẻ tiêu đề Phần 3
-        container.innerHTML += `<div class="part-header">PHẦN 3: TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
+        container.innerHTML += `<div class="part-header">PHẦN 3: TRẮC NGHIỆM TRẢ LỜI NGẮN (3 điểm)</div>`;
         
         p3.forEach((q, index) => {
             const qIndex = currentQuestions.indexOf(q);
@@ -409,4 +409,5 @@ document.addEventListener('DOMContentLoaded', () => {
         alert("Dữ liệu thi bị lỗi. Vui lòng đăng nhập lại.");
         window.location.href = 'index.html';
     }
+
 });
