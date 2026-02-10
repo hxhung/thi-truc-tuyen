@@ -161,3 +161,35 @@ input:focus, select:focus {
     font-size: 0.85rem;
     color: #888;
 }
+/* =========================================
+   FIX GIAO DIỆN LOGIN (ICON BỊ ĐÈ CHỮ)
+   ========================================= */
+
+/* 1. Đẩy chữ sang phải 45px để tránh icon */
+.login-container input[type="text"], 
+.login-container input[type="number"] {
+    padding-left: 45px !important; /* Dùng !important để chắc chắn ghi đè */
+}
+
+/* 2. Định vị lại Icon cho chuẩn giữa dòng */
+.input-wrapper {
+    position: relative; /* Làm mốc tọa độ */
+}
+
+.input-wrapper .input-icon {
+    position: absolute;
+    left: 15px;      /* Cách mép trái 15px */
+    top: 50%;        /* Giữa theo chiều dọc */
+    transform: translateY(-50%);
+    color: #888;
+    z-index: 10;     /* Nổi lên trên ô input */
+    display: flex;
+    align-items: center;
+    pointer-events: none; /* Cho phép bấm xuyên qua icon */
+}
+
+/* 3. Đảm bảo Icon SVG có kích thước chuẩn */
+.input-wrapper .input-icon svg {
+    width: 20px;
+    height: 20px;
+}
