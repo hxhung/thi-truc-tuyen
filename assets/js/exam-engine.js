@@ -13,66 +13,52 @@ let submitted = false;
 // =====================================================
 // 1. KHỞI TẠO & XỬ LÝ DỮ LIỆU
 // =====================================================
+// =====================================================
+// CHỈ CẦN THAY THẾ HÀM NÀY (GIỮ NGUYÊN PHẦN CÒN LẠI)
+// =====================================================
 window.initExam = function (data) {
-    console.log("Đang khởi tạo bài thi với dữ liệu:", data); // Log để debug
+    console.log("Đang khởi tạo bài thi...", data);
     if (!data) return;
     sessionData = data;
     
     const allQuestions = data.questions || [];
     
-    // 1. Lọc câu hỏi theo mã đề (Chấp nhận cả hoa/thường)
-    // Đồng thời xử lý "Fill Down" cho câu True/False bị khuyết nội dung gốc
+    // 1. Lọc câu hỏi theo mã đề
+    // Fix lỗi CSV: Nếu câu True/False bị khuyết nội dung gốc thì lấy của dòng trên
     let lastContentRoot = "";
     
-    currentQuestions = allQuestions.filter(q => {
-        // Lấy ID từ cột ExamID (CSV) hoặc examId (JSON)
+    // Lọc ra các câu thuộc đề thi này
+    let filteredQuestions = allQuestions.filter(q => {
         const qId = q.ExamID || q.examId || q.MaDe || ""; 
         return String(qId).trim().toLowerCase() === String(sessionData.examId).trim().toLowerCase();
-    }).map(q => {
-        // Fix lỗi CSV: Nếu dòng dưới khuyết Content_Root thì lấy của dòng trên
-        if (q.Type === "TRUE_FALSE") {
-            if (q.Content_Root && String(q.Content_Root).trim() !== "") {
-                lastContentRoot = q.Content_Root;
-            } else {
-                q.Content_Root = lastContentRoot;
-            }
+    });
+
+    // 2. Xử lý dữ liệu & TỰ ĐỘNG GÁN ID THEO SỐ THỨ TỰ (FIX LỖI 0 ĐIỂM)
+    currentQuestions = filteredQuestions.map((q, index) => {
+        // Xử lý điền nội dung thiếu cho câu chùm (True/False)
+        if (q.Type === "TN_DUNG_SAI" || q.Type === "TRUE_FALSE") {
+            const root = q.Content_Root || q.Question_Root;
+            if (root) lastContentRoot = root;
+            else q.Content_Root = lastContentRoot;
         }
+
+        // --- ĐÂY LÀ DÒNG QUAN TRỌNG NHẤT ---
+        // Vì CSV không có ID, ta buộc phải dùng số thứ tự (index) làm ID
+        // Server cũ của bạn chắc chắn chấm điểm dựa trên thứ tự này.
+        q.QuestionID = String(index); 
+        // ------------------------------------
+
+        // Chuẩn hóa tên loại câu hỏi
+        if(q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
+        if(q.Type === 'TN_DUNG_SAI') q.Type = 'TRUE_FALSE';
+
         return q;
     });
 
-    console.log("Số câu hỏi sau khi lọc:", currentQuestions.length);
+    console.log("Dữ liệu sau khi fix ID:", currentQuestions); // F12 để xem ID đã là 0, 1, 2... chưa
 
-    // Kiểm tra dữ liệu
-    if (currentQuestions.length === 0) {
-        alert(`❌ Lỗi: Không tìm thấy câu hỏi cho mã đề "${sessionData.examId}"!\n(Server trả về ${allQuestions.length} dòng, nhưng không dòng nào khớp mã đề)`);
-        setTimeout(() => window.location.href = 'index.html', 3000);
-        return;
-    }
-
-    // 2. Thiết lập thời gian
-    const now = Date.now();
-    const startToken = parseInt(sessionData.startToken) || now;
-    const elapsedSeconds = Math.floor((now - startToken) / 1000);
-    const totalDurationSeconds = parseInt(sessionData.duration) * 60;
-    
-    timeLeft = totalDurationSeconds - elapsedSeconds;
-
-    if (timeLeft <= 0) {
-        alert('Đã hết giờ làm bài!');
-        finishExam();
-        return;
-    }
-
-    // 3. Hiển thị thông tin header
-    const titleEl = document.getElementById('exam-title');
-    if (titleEl) titleEl.innerText = `Đề thi: ${sessionData.title || sessionData.examId}`;
-    
-    // 4. Bắt đầu chạy
-    startTimer();
     renderQuestions();
-    
-    // Auto-save mỗi 15 giây
-    setInterval(autoSave, 15000);
+    startTimer(data.duration);
 };
 
 
