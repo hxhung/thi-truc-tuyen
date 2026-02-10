@@ -187,3 +187,25 @@ body {
     .tf-row { flex-direction: column; align-items: flex-start; gap: 10px; }
     .tf-options { width: 100%; justify-content: space-between; }
 }
+/* Sửa lỗi tràn ô nhập liệu */
+.fill-input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+/* Hiệu ứng số đếm ngược khi hết giờ */
+.countdown-number {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #e53e3e;
+    margin: 20px 0;
+    animation: pulse 1s infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
