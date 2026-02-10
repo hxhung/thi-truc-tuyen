@@ -1,6 +1,7 @@
 /**
- * EXAM ENGINE - PHIÊN BẢN FIX LOADING & TIMER
- * Đã bổ sung EventListener để kích hoạt chạy
+ * EXAM ENGINE - PHIÊN BẢN FIX LOADING & TIMER - Ver 1.10
+ * Đang fix thẩm mĩ trang bài làm
+ 1. Thay thế hàm renderQuestions cũ trong assets/js/exam-engine.js
  */
 
 let currentQuestions = [];
@@ -76,9 +77,117 @@ window.initExam = function (data) {
 };
 
 // =====================================================
-// 2. RENDER GIAO DIỆN
+// 2. RENDER GIAO DIỆN (thay hàm mới)
 // =====================================================
+// Hàm thay thế mới
 function renderQuestions() {
+    const container = document.getElementById('exam-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // --- PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN ---
+    const p1 = currentQuestions.filter(q => q.Type === 'MULTIPLE_CHOICE');
+    if (p1.length > 0) {
+        // Thẻ tiêu đề Phần 1
+        container.innerHTML += `<div class="part-header">PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN</div>`;
+        
+        p1.forEach((q, index) => {
+            const qIndex = currentQuestions.indexOf(q); 
+            container.innerHTML += `
+                <div class="question-card" id="q-${qIndex}">
+                    <div class="question-content-wrapper">
+                        <strong class="q-label">Câu ${index + 1}:</strong> 
+                        <span class="q-text">${q.Content_Root || ''}</span>
+                    </div>
+                    ${q.Image ? `<div class="q-image"><img src="${q.Image}"></div>` : ''}
+                    
+                    <div class="options-grid">
+                        ${renderOption(qIndex, 'A', q.Option_A)}
+                        ${renderOption(qIndex, 'B', q.Option_B)}
+                        ${renderOption(qIndex, 'C', q.Option_C)}
+                        ${renderOption(qIndex, 'D', q.Option_D)}
+                    </div>
+                </div>`;
+        });
+    }
+
+    // --- PHẦN 2: ĐÚNG SAI ---
+    const p2Raw = currentQuestions.filter(q => q.Type === 'TRUE_FALSE');
+    if (p2Raw.length > 0) {
+        const groups = {};
+        p2Raw.forEach(q => {
+            const key = q.Content_Root || "unknown";
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(q);
+        });
+
+        // Thẻ tiêu đề Phần 2
+        container.innerHTML += `<div class="part-header">PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI</div>`;
+        
+        let groupCount = 1;
+        for (const [content, items] of Object.entries(groups)) {
+            let subRows = '';
+            items.forEach((item, subIdx) => {
+                const globalIdx = currentQuestions.indexOf(item);
+                const label = String.fromCharCode(97 + subIdx); // a, b, c, d
+                subRows += `
+                    <div class="tf-row">
+                        <div class="tf-content"><b>${label})</b> ${item.Content_Sub || ''}</div>
+                        <div class="tf-options">
+                            <label class="tf-btn"><input type="radio" name="q${globalIdx}" value="T" onchange="saveAnswer(${globalIdx}, 'T')"> ĐÚNG</label>
+                            <label class="tf-btn"><input type="radio" name="q${globalIdx}" value="F" onchange="saveAnswer(${globalIdx}, 'F')"> SAI</label>
+                        </div>
+                    </div>`;
+            });
+
+            container.innerHTML += `
+                <div class="question-card">
+                    <div class="question-content-wrapper">
+                        <strong class="q-label">Câu ${groupCount++}:</strong>
+                        <span class="q-text">${content}</span>
+                    </div>
+                    <div class="tf-container">${subRows}</div>
+                </div>`;
+        }
+    }
+
+    // --- PHẦN 3: TRẢ LỜI NGẮN ---
+    const p3 = currentQuestions.filter(q => q.Type === 'FILL_IN' || q.Type === 'SHORT_ANSWER');
+    if (p3.length > 0) {
+        // Thẻ tiêu đề Phần 3
+        container.innerHTML += `<div class="part-header">PHẦN 3: TRẮC NGHIỆM TRẢ LỜI NGẮN</div>`;
+        
+        p3.forEach((q, index) => {
+            const qIndex = currentQuestions.indexOf(q);
+            container.innerHTML += `
+                <div class="question-card" id="q-${qIndex}">
+                    <div class="question-content-wrapper">
+                        <strong class="q-label">Câu ${index + 1}:</strong>
+                        <span class="q-text">${q.Content_Root || ''}</span>
+                    </div>
+                    ${q.Image ? `<div class="q-image"><img src="${q.Image}"></div>` : ''}
+                    
+                    <div class="fill-input-container">
+                        <label>Đáp án của bạn:</label>
+                        <input type="text" class="fill-input" placeholder="Nhập kết quả..." 
+                            onchange="saveAnswer(${qIndex}, this.value)">
+                    </div>
+                </div>`;
+        });
+    }
+    
+    // Render công thức Toán (KaTeX)
+    if (window.renderMathInElement) {
+        renderMathInElement(container, {
+            delimiters: [
+                {left: "$$", right: "$$", display: true},
+                {left: "$", right: "$", display: false}
+            ]
+        });
+    }
+}
+/** ============== Bắt đầu hàm cũ function renderQuestions() ======================
+ function renderQuestions() {
     const container = document.getElementById('exam-container');
     if (!container) return;
     container.innerHTML = '';
@@ -177,6 +286,7 @@ function renderQuestions() {
         });
     }
 }
+============== Kết thúc hàm cũ function renderQuestions() ====================== */
 
 function renderOption(qIdx, label, content) {
     if (!content) return '';
