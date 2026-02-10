@@ -75,70 +75,77 @@ window.initExam = function (data) {
     setInterval(autoSave, 15000);
 };
 
+
+// 2. RENDER GIAO DIỆN (PHIÊN BẢN V4 - FIX TOÀN DIỆN)
 // =====================================================
-// 2. RENDER GIAO DIỆN
-// =====================================================
-// --- BẮT ĐẦU ĐOẠN CODE THAY THẾ CHO renderQuestions ---
 function renderQuestions() {
     const container = document.getElementById('exam-container');
     if (!container) return;
 
-    // Cập nhật tiêu đề đề thi
+    // Cập nhật tiêu đề
     const titleEl = document.getElementById('exam-title');
     if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
     
+    // --- KHU VỰC AN TOÀN DỮ LIỆU (QUAN TRỌNG) ---
+    // Hàm này giúp tìm nội dung ở mọi biến có thể, tránh việc hiện trắng trơn
+    const getText = (q) => {
+        if (!q) return "";
+        return q.Content || q.Question || q.DeBai || q.NoiDung || q.Content_Root || ""; 
+    };
+    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
+    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
+
     // 1. Phân loại câu hỏi vào 3 nhóm
     const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
-    
-    // Map tên hiển thị cho đẹp
     const partTitles = {
         "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
         "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
-        "SHORT_ANSWER": "PHẦN 3: TRẮC NGHIỆM TRẢ LỜI NGẮN" // Hoặc "Tự luận" tùy bạn
+        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
     };
 
-    // Duyệt qua mảng currentQuestions có sẵn trong file gốc
+    // Duyệt qua dữ liệu gốc để chia nhóm
     currentQuestions.forEach(q => {
-        // Fallback: Nếu Type undefined thì gán mặc định (tránh lỗi)
         let type = q.Type || "MULTIPLE_CHOICE"; 
-        // Fix trường hợp tên type trong data khác code (ví dụ FILL_IN thay vì SHORT_ANSWER)
-        if(type === 'FILL_IN') type = 'SHORT_ANSWER';
+        // Fix lỗi sai tên loại câu hỏi trong database
+        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
+        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
         
         if (parts[type]) parts[type].push(q);
     });
 
     let html = '';
 
-    // Helper tạo header câu hỏi (Câu X + Nội dung) thẳng hàng
+    // Helper tạo header: Câu X + Nội dung (Đảm bảo thẳng hàng)
     const createHeader = (idx, content, img) => `
         <div class="question-header">
             <div class="q-badge">Câu ${idx}</div>
             <div class="q-content">
-                ${content || ''}
-                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Ảnh minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
+                ${content}
+                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
             </div>
         </div>
     `;
 
-    // --- RENDER PHẦN 1 ---
+    // --- RENDER PHẦN 1: TRẮC NGHIỆM (A,B,C,D) ---
     if (parts["MULTIPLE_CHOICE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
         parts["MULTIPLE_CHOICE"].forEach((q, i) => {
             const realIdx = i + 1;
-            // Check nếu đáp án đã chọn (để phục hồi UI khi reload)
-            const savedVal = studentAnswers[q.QuestionID || q.id] || "";
+            const qID = getID(q);
+            const savedVal = studentAnswers[qID] || "";
             
             html += `<div class="question-item">
-                ${createHeader(realIdx, q.Content, q.Image || q.Image_URL)}
+                ${createHeader(realIdx, getText(q), getImg(q))}
                 <div class="options-grid">
                     ${['A','B','C','D'].map(opt => {
-                        const val = q['Option_' + opt] || '';
+                        // Tìm nội dung đáp án ở nhiều biến khác nhau (Option_A, A, OptionA...)
+                        const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
                         const checked = savedVal === opt ? 'checked' : '';
                         return `
                         <label class="option-item">
-                            <input type="radio" name="q_${q.QuestionID}" value="${opt}" ${checked} 
-                                onchange="saveAnswer('${q.QuestionID}', '${opt}')">
-                            <span><b>${opt}.</b> ${val}</span>
+                            <input type="radio" name="q_${qID}" value="${opt}" ${checked} 
+                                onchange="saveAnswer('${qID}', '${opt}')">
+                            <span><b>${opt}.</b> ${optVal}</span>
                         </label>`;
                     }).join('')}
                 </div>
@@ -147,72 +154,78 @@ function renderQuestions() {
         html += `</div>`;
     }
 
-    // --- RENDER PHẦN 2 ---
+    // --- RENDER PHẦN 2: ĐÚNG SAI (Logic Gom Nhóm - Đã Fix Lỗi Thẻ Đóng) ---
     if (parts["TRUE_FALSE"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
         
-        // Logic gom nhóm câu hỏi True/False theo Content_Root
-        let currentRoot = "";
-        let globalIdx = parts["MULTIPLE_CHOICE"].length; // Đếm tiếp số câu
-        let subIdx = 0; // a, b, c, d
+        let currentRoot = "###INIT###"; // Giá trị khởi tạo đặc biệt
+        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
+        let subIdx = 0; 
+        let isGroupOpen = false; 
 
         parts["TRUE_FALSE"].forEach((q) => {
-            // Nếu đổi sang bài đọc mới -> Tăng số câu
-            if (q.Content_Root !== currentRoot) {
-                currentRoot = q.Content_Root;
+            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
+            const qID = getID(q);
+            
+            // Nếu gặp đề bài gốc mới -> Đóng nhóm cũ -> Mở nhóm mới
+            if (rootText !== currentRoot) {
+                if (isGroupOpen) { 
+                    html += `</div></div>`; // Đóng div nhóm trước
+                    isGroupOpen = false;
+                }
+                
+                currentRoot = rootText;
                 globalIdx++;
                 subIdx = 0;
-                // Render đề bài chung (Content_Root) như một câu hỏi
-                html += `<div class="question-item" style="background:#fdfdfd">
+
+                // Mở nhóm mới
+                html += `<div class="question-item">
                             ${createHeader(globalIdx, `<b>${currentRoot}</b>`, null)}
-                            <div class="tf-container" id="tf-group-${globalIdx}">`;
+                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
+                isGroupOpen = true;
             }
 
-            const labelChar = String.fromCharCode(97 + subIdx); // a, b, c...
+            // Render từng dòng a, b, c, d
+            const labelChar = String.fromCharCode(97 + (subIdx % 4)); // a, b, c, d
             subIdx++;
-            
-            // Check saved answer
-            const sVal = studentAnswers[q.QuestionID] || "";
-            
-            // Append dòng ý nhỏ vào group hiện tại (Dùng kỹ thuật chèn chuỗi đơn giản)
-            // Lưu ý: Cách render này hơi trick một chút để gom nhóm HTML
-            // Ta sẽ đóng div cũ và mở div mới? Không, ta render linear.
-            // Sửa lại: Render từng dòng một, nhưng dòng đầu tiên in Header.
-            
-            // Để đơn giản và an toàn nhất cho logic hiển thị: 
-            // Ta render Header ở dòng đầu tiên của nhóm.
-            
+            const sVal = studentAnswers[qID] || "";
+            const qText = getText(q); 
+
             html += `
             <div class="tf-row">
-                <span style="flex:1"><b>${labelChar})</b> ${q.Content}</span>
+                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${qText}</span>
                 <div class="tf-options">
-                    <label class="tf-btn"><input type="radio" name="q_${q.QuestionID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${q.QuestionID}', 'TRUE')"> ĐÚNG</label>
-                    <label class="tf-btn"><input type="radio" name="q_${q.QuestionID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${q.QuestionID}', 'FALSE')"> SAI</label>
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
                 </div>
             </div>`;
-            
-            // Nếu câu tiếp theo khác root hoặc hết danh sách -> Đóng div
-            // Logic này phức tạp, ta dùng cách đơn giản hơn: Render mỗi câu 1 card? Không đẹp.
-            // Ta sẽ đóng thẻ question-item thủ công ở cuối hàm
         });
-        // Lưu ý: Logic True/False trên chưa đóng thẻ </div> chuẩn xác nếu dữ liệu lộn xộn.
-        // NHƯNG để an toàn: Ta render mỗi ý là 1 dòng, bỏ qua việc gom nhóm phức tạp nếu sợ lỗi logic.
-        // Tuy nhiên, theo yêu cầu đẹp, tôi sẽ chốt phương án: Render từng câu lẻ nhưng ẩn Header nếu trùng.
-        html += `</div>`; // Đóng card
+
+        if (isGroupOpen) html += `</div></div>`; // Đóng nhóm cuối cùng
+        html += `</div>`; // Đóng Card Phần 2
     }
 
-    // --- RENDER PHẦN 3 ---
+    // --- RENDER PHẦN 3: TRẢ LỜI NGẮN ---
     if (parts["SHORT_ANSWER"].length > 0) {
         html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
+        
+        // Tính số câu bắt đầu cho phần 3
+        const p1Count = parts["MULTIPLE_CHOICE"].length;
+        // Đếm số nhóm (số câu cha) của phần 2
+        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
+        
+        let currentIdx = p1Count + p2Count;
+
         parts["SHORT_ANSWER"].forEach((q, i) => {
-            const realIdx = parts["MULTIPLE_CHOICE"].length + (parts["TRUE_FALSE"].length > 0 ? 4 : 0) + i + 1; // Số thứ tự ước lượng
-            const sVal = studentAnswers[q.QuestionID] || "";
+            currentIdx++;
+            const qID = getID(q);
+            const sVal = studentAnswers[qID] || "";
             
             html += `<div class="question-item">
-                ${createHeader(realIdx, q.Content, q.Image || q.Image_URL)}
+                ${createHeader(currentIdx, getText(q), getImg(q))}
                 <div class="fill-input-container">
                     <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
-                        onchange="saveAnswer('${q.QuestionID}', this.value)">
+                        onchange="saveAnswer('${qID}', this.value)">
                 </div>
             </div>`;
         });
@@ -221,11 +234,12 @@ function renderQuestions() {
 
     container.innerHTML = html;
     
-    // Render công thức Toán (nếu có thư viện)
+    // Render công thức toán
     if (window.renderMathInElement) {
         try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
     }
 }
+// --- KẾT THÚC ĐOẠN CODE SỬA LỖI ---
 // --- KẾT THÚC ĐOẠN CODE renderQuestions ---
 
 function renderOption(qIdx, label, content) {
@@ -418,5 +432,153 @@ window.submitFinal = async function() {
         submitted = false;
         if(processingModal) processingModal.classList.add('hidden');
         if(btn) { btn.disabled = false; btn.innerText = 'NỘP BÀI'; }
+    }
+};
+// =====================================================
+// RENDER GIAO DIỆN V4 (DÁN VÀO CUỐI CÙNG FILE ĐỂ FIX LỖI)
+// =====================================================
+window.renderQuestions = function() {
+    console.log("Đang chạy renderQuestions V4 (Bản chuẩn)"); // Log kiểm tra
+    const container = document.getElementById('exam-container');
+    if (!container) return;
+
+    // Cập nhật tiêu đề
+    const titleEl = document.getElementById('exam-title');
+    if (titleEl && sessionData) titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
+    
+    // Hàm an toàn để lấy nội dung (tránh bị null/undefined làm mất đề)
+    const getText = (q) => {
+        if (!q) return "";
+        return q.Content || q.Question || q.DeBai || q.NoiDung || q.Content_Root || ""; 
+    };
+    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
+    const getID = (q) => q.QuestionID || q.id || q.ExamID || Math.random().toString(36).substr(2, 9);
+
+    // Phân loại câu hỏi
+    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
+    const partTitles = {
+        "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
+        "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
+        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
+    };
+
+    currentQuestions.forEach(q => {
+        let type = q.Type || "MULTIPLE_CHOICE"; 
+        if(type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
+        if(type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
+        if (parts[type]) parts[type].push(q);
+    });
+
+    let html = '';
+
+    // Helper tạo header
+    const createHeader = (idx, content, img) => `
+        <div class="question-header">
+            <div class="q-badge">Câu ${idx}</div>
+            <div class="q-content">
+                ${content}
+                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" style="max-width:100%; border-radius:8px; border:1px solid #ddd"></div>` : ''}
+            </div>
+        </div>
+    `;
+
+    // --- RENDER PHẦN 1 ---
+    if (parts["MULTIPLE_CHOICE"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
+        parts["MULTIPLE_CHOICE"].forEach((q, i) => {
+            const realIdx = i + 1;
+            const qID = getID(q);
+            const savedVal = studentAnswers[qID] || "";
+            
+            html += `<div class="question-item">
+                ${createHeader(realIdx, getText(q), getImg(q))}
+                <div class="options-grid">
+                    ${['A','B','C','D'].map(opt => {
+                        const optVal = q['Option_' + opt] || q[opt] || q['Option' + opt] || ''; 
+                        const checked = savedVal === opt ? 'checked' : '';
+                        return `
+                        <label class="option-item">
+                            <input type="radio" name="q_${qID}" value="${opt}" ${checked} 
+                                onchange="saveAnswer('${qID}', '${opt}')">
+                            <span><b>${opt}.</b> ${optVal}</span>
+                        </label>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    // --- RENDER PHẦN 2 (FIX LỖI THẺ ĐÓNG) ---
+    if (parts["TRUE_FALSE"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
+        
+        let currentRoot = "###INIT###";
+        let globalIdx = parts["MULTIPLE_CHOICE"].length; 
+        let subIdx = 0; 
+        let isGroupOpen = false; 
+
+        parts["TRUE_FALSE"].forEach((q) => {
+            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
+            const qID = getID(q);
+            
+            if (rootText !== currentRoot) {
+                if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
+                
+                currentRoot = rootText;
+                globalIdx++;
+                subIdx = 0;
+
+                html += `<div class="question-item">
+                            ${createHeader(globalIdx, `<b>${currentRoot}</b>`, null)}
+                            <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
+                isGroupOpen = true;
+            }
+
+            const labelChar = String.fromCharCode(97 + (subIdx % 4)); 
+            subIdx++;
+            const sVal = studentAnswers[qID] || "";
+            
+            html += `
+            <div class="tf-row">
+                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${getText(q)}</span>
+                <div class="tf-options">
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
+                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
+                </div>
+            </div>`;
+        });
+
+        if (isGroupOpen) html += `</div></div>`; 
+        html += `</div>`;
+    }
+
+    // --- RENDER PHẦN 3 (FIX MẤT CÂU HỎI) ---
+    if (parts["SHORT_ANSWER"].length > 0) {
+        html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
+        
+        const p1Count = parts["MULTIPLE_CHOICE"].length;
+        const p2Count = (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size; 
+        let currentIdx = p1Count + p2Count;
+
+        parts["SHORT_ANSWER"].forEach((q) => {
+            currentIdx++;
+            const qID = getID(q);
+            const sVal = studentAnswers[qID] || "";
+            
+            html += `<div class="question-item">
+                ${createHeader(currentIdx, getText(q), getImg(q))}
+                <div class="fill-input-container">
+                    <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}"
+                        onchange="saveAnswer('${qID}', this.value)">
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+    }
+
+    container.innerHTML = html;
+    if (window.renderMathInElement) {
+        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e){}
     }
 };
