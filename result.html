@@ -8,11 +8,9 @@
     <style>
         :root {
             --primary: #6366f1;
-            --secondary: #a855f7;
-            --success: #22c55e;
-            --danger: #ef4444;
+            --primary-hover: #4f46e5;
             --bg: #f8fafc;
-            --card-bg: rgba(255, 255, 255, 0.9);
+            --card-bg: #ffffff;
         }
 
         body {
@@ -23,136 +21,137 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 15px;
             color: #1e293b;
         }
 
         .result-container {
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
             width: 100%;
-            max-width: 500px;
-            padding: 40px;
+            max-width: 420px; /* Thu hẹp lại một chút cho cân đối */
+            padding: 30px;
             border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
             text-align: center;
-            animation: fadeIn 0.6s ease-out;
+            box-sizing: border-box; /* Đảm bảo padding không làm tăng chiều rộng */
+            animation: fadeIn 0.5s ease-out;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         .header h2 {
             margin: 0;
             color: #334155;
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
 
         .student-box {
-            background: #f1f5f9;
+            background: #f8fafc;
             padding: 15px;
-            border-radius: 12px;
+            border-radius: 16px;
             margin: 20px 0;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #f1f5f9;
         }
 
         #student-name {
             display: block;
             font-weight: 700;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             color: var(--primary);
         }
 
         #student-class {
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #64748b;
+            margin-top: 4px;
+            display: block;
         }
 
         .score-circle {
-            width: 150px;
-            height: 150px;
-            margin: 30px auto;
+            width: 130px;
+            height: 130px;
+            margin: 25px auto;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: white;
-            border: 8px solid #e2e8f0;
-            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
-            transition: all 0.3s ease;
+            background: #fff;
+            border: 6px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.1);
         }
 
         .score-value {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 800;
             line-height: 1;
         }
 
         .score-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             color: #94a3b8;
-            margin-top: 5px;
         }
 
         .details-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 25px;
+            width: 100%; /* Căn ngang chuẩn */
         }
 
         .detail-item {
-            background: white;
+            background: #f8fafc;
             padding: 12px 5px;
             border-radius: 12px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #f1f5f9;
         }
 
         .detail-label {
             font-size: 0.7rem;
             color: #64748b;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
 
         .detail-score {
             font-weight: 700;
+            font-size: 0.95rem;
             color: #334155;
         }
 
+        /* Nút quay lại đã được fix chiều rộng */
         .btn-home {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 14px 30px;
+            padding: 14px 20px;
             border-radius: 12px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
             text-decoration: none;
-            display: inline-block;
-            width: 100%;
+            display: block; /* Chuyển sang block để kiểm soát width */
+            width: 100%; /* Sẽ chiếm đúng 100% của container đã trừ padding */
+            box-sizing: border-box; /* FIX CHÍNH: Giữ nút không lấn khỏi card */
         }
 
         .btn-home:hover {
-            background: var(--primary-dark);
+            background: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
         }
 
         .error-msg {
-            color: var(--danger);
-            background: #fef2f2;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
+            color: #ef4444;
+            padding: 20px;
         }
     </style>
 </head>
@@ -164,8 +163,8 @@
         </div>
 
         <div class="student-box">
-            <span id="student-name">Đang tải...</span>
-            <span id="student-class">---</span>
+            <span id="student-name">...</span>
+            <span id="student-class">...</span>
         </div>
 
         <div class="score-circle" id="score-ring">
@@ -176,83 +175,61 @@
         <div class="details-grid">
             <div class="detail-item">
                 <span class="detail-label">Phần I</span>
-                <span class="detail-score" id="p1">0.0</span>
+                <span id="p1" class="detail-score">0.0</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Phần II</span>
-                <span class="detail-score" id="p2">0.0</span>
+                <span id="p2" class="detail-score">0.0</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Phần III</span>
-                <span class="detail-score" id="p3">0.0</span>
+                <span id="p3" class="detail-score">0.0</span>
             </div>
         </div>
 
-        <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Quay lại Trang chủ</a>
+        <a href="index.html" class="btn-home">Quay lại Trang chủ</a>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            loadFinalResult();
-        });
-
-        function loadFinalResult() {
-            try {
-                // 1. Lấy dữ liệu từ SessionStorage (Kết quả từ exam-engine.js gửi qua)
-                const rawResult = sessionStorage.getItem('examResult');
-                const rawExam = sessionStorage.getItem('currentExam'); // Thông tin thí sinh gốc
-                
-                if (!rawResult) {
-                    throw new Error("Không tìm thấy dữ liệu kết quả.");
-                }
-
-                const data = JSON.parse(rawResult);
-                const studentInfo = JSON.parse(rawExam || '{}');
-
-                console.log("📊 Dữ liệu hiển thị:", data);
-
-                // 2. Hiển thị thông tin thí sinh (Ưu tiên thông tin từ session gốc)
-                document.getElementById('student-name').textContent = studentInfo.studentName || "Thí sinh";
-                document.getElementById('student-class').textContent = "Lớp: " + (studentInfo.studentClass || "Tự do");
-
-                // 3. Xử lý điểm số (Dựa trên cấu trúc code_new.js trả về: {success, result: {finalScore, p1, p2, p3}})
-                // data ở đây chính là phản hồi từ server
-                const res = data.result || {};
-                const finalScore = parseFloat(res.finalScore || 0);
-
-                // Hiển thị điểm tổng
-                const scoreEl = document.getElementById('final-score');
-                scoreEl.textContent = finalScore.toFixed(1);
-
-                // Đổi màu vòng tròn theo điểm số
-                const ring = document.getElementById('score-ring');
-                if (finalScore >= 8) {
-                    ring.style.borderColor = '#22c55e'; // Xanh lá
-                    scoreEl.style.color = '#22c55e';
-                } else if (finalScore >= 5) {
-                    ring.style.borderColor = '#eab308'; // Vàng
-                    scoreEl.style.color = '#eab308';
-                } else {
-                    ring.style.borderColor = '#ef4444'; // Đỏ
-                    scoreEl.style.color = '#ef4444';
-                }
-
-                // Hiển thị chi tiết từng phần
-                document.getElementById('p1').textContent = (res.p1?.score || 0).toFixed(2);
-                document.getElementById('p2').textContent = (res.p2?.score || 0).toFixed(2);
-                document.getElementById('p3').textContent = (res.p3?.score || 0).toFixed(2);
-
-            } catch (error) {
-                console.error('❌ Lỗi:', error);
+            const rawResult = sessionStorage.getItem('examResult');
+            const rawExam = sessionStorage.getItem('currentExam');
+            
+            if (!rawResult) {
                 document.getElementById('main-content').innerHTML = `
                     <div class="error-msg">
-                        <h3>Đã có lỗi xảy ra</h3>
-                        <p>${error.message}</p>
-                        <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Quay lại trang chủ</a>
-                    </div>
-                `;
+                        <p>Không tìm thấy dữ liệu kết quả.</p>
+                        <a href="index.html" class="btn-home">Về trang chủ</a>
+                    </div>`;
+                return;
             }
-        }
+
+            const data = JSON.parse(rawResult);
+            const student = JSON.parse(rawExam || '{}');
+            const res = data.result || {};
+
+            // Hiển thị thông tin
+            document.getElementById('student-name').textContent = student.studentName || "Thí sinh";
+            document.getElementById('student-class').textContent = "Lớp: " + (student.studentClass || "Tự do");
+            
+            const finalScore = parseFloat(res.finalScore || 0);
+            const scoreEl = document.getElementById('final-score');
+            scoreEl.textContent = finalScore.toFixed(1);
+
+            // Đổi màu theo điểm
+            const ring = document.getElementById('score-ring');
+            let color = '#ef4444'; // Mặc định Đỏ
+            if (finalScore >= 8) color = '#22c55e'; // Xanh
+            else if (finalScore >= 5) color = '#eab308'; // Vàng
+
+            ring.style.borderColor = color;
+            scoreEl.style.color = color;
+
+            // Điểm chi tiết
+            document.getElementById('p1').textContent = (res.p1?.score || 0).toFixed(2);
+            document.getElementById('p2').textContent = (res.p2?.score || 0).toFixed(2);
+            document.getElementById('p3').textContent = (res.p3?.score || 0).toFixed(2);
+        });
     </script>
 </body>
 </html>
