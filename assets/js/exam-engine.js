@@ -1,6 +1,7 @@
 /**
  * =====================================================
  * EXAM ENGINE - PHIÊN BẢN FINAL (ĐÃ FIX SYNTAX & TRÙNG LẶP)
+ * Bổ sung lưu dữ liệu thô (dòng 327-341)
  * =====================================================
  */
 
@@ -322,6 +323,23 @@ window.submitFinal = async function() {
         });
 
         if (result.success) {
+			// --- 1. LOGGING (LƯU DỮ LIỆU THÔ) ---
+            try {
+                // Sử dụng key riêng để tránh nhầm lẫn với các hệ thống khác
+                const rawHistory = JSON.parse(localStorage.getItem('online_exam_logs') || '[]');
+                
+                // Chỉ push nguyên cục session và result vào, không xử lý gì cả
+                rawHistory.push({
+                    timestamp: new Date().toISOString(),
+                    session: sessionData, // Chứa tên đề, tên học sinh...
+                    result: result        // Chứa điểm số, chi tiết đáp án...
+                });
+
+                localStorage.setItem('online_exam_logs', JSON.stringify(rawHistory));
+            } catch (e) {
+                console.error("Save log error:", e);
+            }
+            // --- KẾT THÚC LOGGING ---
             localStorage.removeItem(`autosave_${sessionData.examId}`);
             sessionStorage.setItem('examResult', JSON.stringify(result));
             window.location.href = 'result.html';
