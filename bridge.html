@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<script>
+    window.addEventListener('message', function(e) {
+        // Chỉ trả lời khi nhận đúng lệnh
+        if (e.data === 'CMD_GET_HISTORY') {
+            
+            // 1. Lấy dữ liệu thô
+            const rawData = JSON.parse(localStorage.getItem('online_exam_logs') || '[]');
+
+            // 2. CHUẨN HÓA DỮ LIỆU (Mapping/Adapter)
+            const standardizedList = rawData.map(item => {
+                // Kiểm tra an toàn null/undefined
+                const sess = item.session || {};
+                const res = item.result || {};
+                const finalRes = res.result || {}; // Cấu trúc result của exam-engine hơi sâu
+
+                // MAP sang định dạng của de-10.html
+                return {
+                    timestamp: item.timestamp,
+                    
+                    // Logic lấy tên: Ưu tiên title, không có thì lấy examId
+                    testName: sess.title || ("Mã đề: " + sess.examId) || "Bài thi trực tuyến",
+                    
+                    // Logic lấy tên HS
+                    studentName: sess.studentName || "Thí sinh tự do",
+                    
+                    // Logic lấy điểm
+                    score: parseFloat(finalRes.finalScore || 0),
+                    
+                    // Logic đếm câu đúng (nếu cần cho thống kê)
+                    correctAnswers: 0, // Tính sau nếu cần, hoặc để 0
+                    
+                    // Đánh dấu nguồn gốc (để debug nếu cần)
+                    origin: 'thi-truc-tuyen'
+                };
+            });
+
+            // 3. Gửi dữ liệu ĐÃ SẠCH về
+            e.source.postMessage({
+                type: 'RESP_HISTORY_DATA',
+                payload: JSON.stringify(standardizedList)
+            }, '*');
+        }
+    });
+</script>
+</body>
+</html>
