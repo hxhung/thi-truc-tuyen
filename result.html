@@ -4,232 +4,445 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết Quả Bài Thi | Hệ Thống Thi Trực Tuyến</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
+            --primary:       #6366f1;
             --primary-hover: #4f46e5;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
+            --green:         #22c55e;
+            --yellow:        #eab308;
+            --red:           #ef4444;
+            --gray-50:       #f8fafc;
+            --gray-100:      #f1f5f9;
+            --gray-200:      #e2e8f0;
+            --gray-400:      #94a3b8;
+            --gray-500:      #64748b;
+            --gray-800:      #1e293b;
+            --text-dark:     #334155;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 15px;
-            color: #1e293b;
+            padding: 20px;
+            color: var(--gray-800);
         }
 
+        /* ── CARD CHÍNH ── */
         .result-container {
-            background: var(--card-bg);
+            background: #fff;
             width: 100%;
-            max-width: 420px; /* Thu hẹp lại một chút cho cân đối */
-            padding: 30px;
+            max-width: 440px;
+            padding: 28px 24px;
             border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
             text-align: center;
-            box-sizing: border-box; /* Đảm bảo padding không làm tăng chiều rộng */
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.4s ease-out;
         }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            to   { opacity: 1; transform: scale(1);    }
         }
 
         .header h2 {
-            margin: 0;
-            color: #334155;
-            font-size: 1.3rem;
+            color: var(--text-dark);
+            font-size: 1.15rem;
             font-weight: 700;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
         }
 
+        /* ── THÔNG TIN THÍ SINH ── */
         .student-box {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 16px;
-            margin: 20px 0;
-            border: 1px solid #f1f5f9;
+            background: var(--gray-50);
+            padding: 12px 16px;
+            border-radius: 14px;
+            margin: 16px 0;
+            border: 1px solid var(--gray-100);
         }
 
         #student-name {
             display: block;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             color: var(--primary);
         }
 
         #student-class {
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-top: 4px;
+            font-size: 0.82rem;
+            color: var(--gray-500);
+            margin-top: 3px;
             display: block;
         }
 
+        /* ── VÒNG TRÒN ĐIỂM ── */
         .score-circle {
             width: 130px;
             height: 130px;
-            margin: 25px auto;
+            margin: 20px auto;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             background: #fff;
-            border: 6px solid #e2e8f0;
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.1);
+            border: 7px solid var(--gray-200);
+            box-shadow: 0 8px 24px rgba(99,102,241,0.12);
+            transition: border-color 0.5s;
         }
 
         .score-value {
-            font-size: 3rem;
+            font-size: 2.8rem;
             font-weight: 800;
             line-height: 1;
         }
 
         .score-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            color: #94a3b8;
+            color: var(--gray-400);
+            letter-spacing: 1px;
+            margin-top: 2px;
         }
 
+        /* ── LƯỚI 3 PHẦN ── */
         .details-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 25px;
-            width: 100%; /* Căn ngang chuẩn */
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
         .detail-item {
-            background: #f8fafc;
-            padding: 12px 5px;
-            border-radius: 12px;
-            border: 1px solid #f1f5f9;
+            background: var(--gray-50);
+            padding: 12px 8px;
+            border-radius: 14px;
+            border: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.2s;
+            position: relative;
         }
+
+        .detail-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .detail-item.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
 
         .detail-label {
-            font-size: 0.7rem;
-            color: #64748b;
+            font-size: 0.68rem;
+            color: var(--gray-500);
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
 
-        .detail-score {
+        .detail-score-big {
+            font-weight: 800;
+            font-size: 1.3rem;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+
+        .detail-fraction {
+            font-size: 0.72rem;
+            color: var(--gray-500);
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* ── PANEL CHI TIẾT MỞ RỘNG ── */
+        .detail-panel {
+            display: none;
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 16px;
+            text-align: left;
+            animation: slideDown 0.2s ease-out;
+        }
+
+        .detail-panel.open { display: block; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0);    }
+        }
+
+        .panel-title {
+            font-size: 0.78rem;
             font-weight: 700;
-            font-size: 0.95rem;
-            color: #334155;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
         }
 
-        /* Nút quay lại đã được fix chiều rộng */
+        /* Phần 1 & 3: thanh progress */
+        .progress-bar-wrap {
+            background: var(--gray-200);
+            border-radius: 99px;
+            height: 8px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #6366f1, #818cf8);
+            transition: width 0.6s ease;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--gray-500);
+            margin-top: 4px;
+        }
+
+        /* Phần 2: badges từng nhóm */
+        .tf-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .tf-badge {
+            padding: 4px 10px;
+            border-radius: 99px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .tf-badge.full  { background: #dcfce7; color: #15803d; border-color: #bbf7d0; } /* 4/4 */
+        .tf-badge.high  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; } /* 3/4 */
+        .tf-badge.mid   { background: #fefce8; color: #854d0e; border-color: #fef08a; } /* 2/4 */
+        .tf-badge.low   { background: #fff7ed; color: #9a3412; border-color: #fed7aa; } /* 1/4 */
+        .tf-badge.zero  { background: #fef2f2; color: #991b1b; border-color: #fecaca; } /* 0/4 */
+
+        /* ── NÚT VỀ TRANG CHỦ ── */
         .btn-home {
+            display: block;
+            width: 100%;
+            padding: 13px;
             background: var(--primary);
-            color: white;
+            color: #fff;
             border: none;
-            padding: 14px 20px;
             border-radius: 12px;
             font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
             text-decoration: none;
-            display: block; /* Chuyển sang block để kiểm soát width */
-            width: 100%; /* Sẽ chiếm đúng 100% của container đã trừ padding */
-            box-sizing: border-box; /* FIX CHÍNH: Giữ nút không lấn khỏi card */
+            transition: all 0.2s;
         }
 
         .btn-home:hover {
             background: var(--primary-hover);
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 8px 20px rgba(99,102,241,0.3);
         }
 
-        .error-msg {
-            color: #ef4444;
+        .hint-text {
+            font-size: 0.72rem;
+            color: var(--gray-400);
+            margin-bottom: 12px;
+        }
+
+        /* ── ERROR ── */
+        .error-wrap {
+            text-align: center;
             padding: 20px;
         }
+        .error-wrap h3 { color: var(--red); margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="result-container" id="main-content">
-        <div class="header">
-            <h2>KẾT QUẢ BÀI THI</h2>
-        </div>
+<div class="result-container" id="main-content">
+    <div class="header"><h2>🎉 Kết Quả Bài Thi</h2></div>
 
-        <div class="student-box">
-            <span id="student-name">...</span>
-            <span id="student-class">...</span>
-        </div>
-
-        <div class="score-circle" id="score-ring">
-            <span class="score-value" id="final-score">0</span>
-            <span class="score-label">ĐIỂM</span>
-        </div>
-
-        <div class="details-grid">
-            <div class="detail-item">
-                <span class="detail-label">Phần I</span>
-                <span id="p1" class="detail-score">0.0</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Phần II</span>
-                <span id="p2" class="detail-score">0.0</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Phần III</span>
-                <span id="p3" class="detail-score">0.0</span>
-            </div>
-        </div>
-
-        <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Quay lại Trang chủ</a>
+    <div class="student-box">
+        <span id="student-name">...</span>
+        <span id="student-class">...</span>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const rawResult = sessionStorage.getItem('examResult');
-            const rawExam = sessionStorage.getItem('currentExam');
-            
-            if (!rawResult) {
-                document.getElementById('main-content').innerHTML = `
-                    <div class="error-msg">
-                        <p>Không tìm thấy dữ liệu kết quả.</p>
-                        <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Về trang chủ</a>
-                    </div>`;
-                return;
-            }
+    <div class="score-circle" id="score-ring">
+        <span class="score-value" id="final-score">0</span>
+        <span class="score-label">ĐIỂM</span>
+    </div>
 
-            const data = JSON.parse(rawResult);
-            const student = JSON.parse(rawExam || '{}');
-            const res = data.result || {};
+    <p class="hint-text">Nhấn vào từng phần để xem chi tiết</p>
 
-            // Hiển thị thông tin
-            document.getElementById('student-name').textContent = student.studentName || "Thí sinh";
-            document.getElementById('student-class').textContent = "Lớp: " + (student.studentClass || "Tự do");
-            
-            const finalScore = parseFloat(res.finalScore || 0);
-            const scoreEl = document.getElementById('final-score');
-            scoreEl.textContent = finalScore.toFixed(1);
+    <!-- LƯỚI 3 PHẦN -->
+    <div class="details-grid">
+        <div class="detail-item" id="card-p1" onclick="togglePanel('p1')">
+            <span class="detail-label">Phần I</span>
+            <span class="detail-score-big" id="p1-score">0.0</span>
+            <span class="detail-fraction"  id="p1-fraction">0/0 câu</span>
+        </div>
+        <div class="detail-item" id="card-p2" onclick="togglePanel('p2')">
+            <span class="detail-label">Phần II</span>
+            <span class="detail-score-big" id="p2-score">0.0</span>
+            <span class="detail-fraction"  id="p2-fraction">0 nhóm</span>
+        </div>
+        <div class="detail-item" id="card-p3" onclick="togglePanel('p3')">
+            <span class="detail-label">Phần III</span>
+            <span class="detail-score-big" id="p3-score">0.0</span>
+            <span class="detail-fraction"  id="p3-fraction">0/0 câu</span>
+        </div>
+    </div>
 
-            // Đổi màu theo điểm
-            const ring = document.getElementById('score-ring');
-            let color = '#ef4444'; // Mặc định Đỏ
-            if (finalScore >= 8) color = '#22c55e'; // Xanh
-            else if (finalScore >= 5) color = '#eab308'; // Vàng
+    <!-- PANEL CHI TIẾT (ẩn mặc định, click card để mở) -->
+    <div class="detail-panel" id="panel-p1">
+        <div class="panel-title">📝 Phần I — Trắc nghiệm</div>
+        <div class="progress-label">
+            <span id="p1-detail-text">Đúng 0/0 câu</span>
+            <span id="p1-pct">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="p1-bar" style="width:0%"></div>
+        </div>
+    </div>
 
-            ring.style.borderColor = color;
-            scoreEl.style.color = color;
+    <div class="detail-panel" id="panel-p2">
+        <div class="panel-title">✅ Phần II — Đúng / Sai (từng nhóm)</div>
+        <div class="tf-badges" id="p2-badges"></div>
+    </div>
 
-            // Điểm chi tiết
-            document.getElementById('p1').textContent = (res.p1?.score || 0).toFixed(2);
-            document.getElementById('p2').textContent = (res.p2?.score || 0).toFixed(2);
-            document.getElementById('p3').textContent = (res.p3?.score || 0).toFixed(2);
-        });
-    </script>
+    <div class="detail-panel" id="panel-p3">
+        <div class="panel-title">✏️ Phần III — Trả lời ngắn</div>
+        <div class="progress-label">
+            <span id="p3-detail-text">Đúng 0/0 câu</span>
+            <span id="p3-pct">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="p3-bar" style="width:0%"></div>
+        </div>
+    </div>
+
+    <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Quay lại Trang chủ</a>
+</div>
+
+<script>
+// ── TOGGLE PANEL ──────────────────────────────────────
+let openPanel = null;
+
+function togglePanel(part) {
+    const panel = document.getElementById('panel-' + part);
+    const card  = document.getElementById('card-' + part);
+
+    if (openPanel && openPanel !== part) {
+        document.getElementById('panel-' + openPanel).classList.remove('open');
+        document.getElementById('card-'  + openPanel).classList.remove('active');
+    }
+
+    const isOpen = panel.classList.contains('open');
+    panel.classList.toggle('open', !isOpen);
+    card.classList.toggle('active', !isOpen);
+    openPanel = isOpen ? null : part;
+}
+
+// ── MAIN ─────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const rawResult = sessionStorage.getItem('examResult');
+    const rawExam   = sessionStorage.getItem('currentExam');
+
+    if (!rawResult) {
+        document.getElementById('main-content').innerHTML = `
+            <div class="error-wrap">
+                <h3>Không tìm thấy kết quả</h3>
+                <p>Phiên làm bài đã hết hạn hoặc chưa nộp bài.</p>
+                <br>
+                <a href="index.html" class="btn-home">Về trang chủ</a>
+            </div>`;
+        return;
+    }
+
+    const data    = JSON.parse(rawResult);
+    const student = JSON.parse(rawExam || '{}');
+
+    // Backend v4.1 trả về: { success: true, result: { finalScore, p1, p2, p3 } }
+    const res = data.result || {};
+
+    // ── Thí sinh ──
+    document.getElementById('student-name').textContent =
+        student.studentName || "Thí sinh";
+    document.getElementById('student-class').textContent =
+        "Lớp: " + (student.studentClass || "Tự do") +
+        "  |  Đề: " + (student.examId || "");
+
+    // ── Điểm tổng ──
+    const finalScore = parseFloat(res.finalScore || 0);
+    const scoreEl    = document.getElementById('final-score');
+    scoreEl.textContent = finalScore.toFixed(2);
+
+    const ring  = document.getElementById('score-ring');
+    let color   = 'var(--red)';
+    if      (finalScore >= 8) color = 'var(--green)';
+    else if (finalScore >= 5) color = 'var(--yellow)';
+    ring.style.borderColor = color;
+    scoreEl.style.color    = color;
+
+    // ── Phần 1 ──
+    const p1 = res.p1 || {};
+    const p1Correct = p1.correct || 0;
+    const p1Total   = p1.total   || 0;
+    const p1Pct     = p1Total > 0 ? Math.round(p1Correct / p1Total * 100) : 0;
+
+    document.getElementById('p1-score').textContent    = parseFloat(p1.score || 0).toFixed(2);
+    document.getElementById('p1-fraction').textContent = `${p1Correct}/${p1Total} câu`;
+    document.getElementById('p1-detail-text').textContent = `Đúng ${p1Correct}/${p1Total} câu`;
+    document.getElementById('p1-pct').textContent      = p1Pct + '%';
+    document.getElementById('p1-bar').style.width      = p1Pct + '%';
+
+    // ── Phần 2 ──
+    const p2 = res.p2 || {};
+    document.getElementById('p2-score').textContent    = parseFloat(p2.score || 0).toFixed(2);
+    document.getElementById('p2-fraction').textContent = (p2.total || 0) + ' nhóm';
+
+    // Parse "3/4, 4/4, 1/4" → badges màu
+    const badgesEl = document.getElementById('p2-badges');
+    const rawDetails = String(p2.correctDetails || '');
+
+    if (rawDetails.trim() === '') {
+        badgesEl.innerHTML = '<span style="color:var(--gray-400);font-size:0.8rem">Không có dữ liệu</span>';
+    } else {
+        badgesEl.innerHTML = rawDetails.split(',').map((item, idx) => {
+            const [correct, total] = item.trim().split('/').map(Number);
+            const cls = correct === total ? 'full'
+                      : correct === 3     ? 'high'
+                      : correct === 2     ? 'mid'
+                      : correct === 1     ? 'low'
+                      :                     'zero';
+            return `<span class="tf-badge ${cls}">Nhóm ${idx + 1}: ${correct}/${total || 4}</span>`;
+        }).join('');
+    }
+
+    // ── Phần 3 ──
+    const p3 = res.p3 || {};
+    const p3Correct = p3.correct || 0;
+    const p3Total   = p3.total   || 0;
+    const p3Pct     = p3Total > 0 ? Math.round(p3Correct / p3Total * 100) : 0;
+
+    document.getElementById('p3-score').textContent    = parseFloat(p3.score || 0).toFixed(2);
+    document.getElementById('p3-fraction').textContent = `${p3Correct}/${p3Total} câu`;
+    document.getElementById('p3-detail-text').textContent = `Đúng ${p3Correct}/${p3Total} câu`;
+    document.getElementById('p3-pct').textContent      = p3Pct + '%';
+    document.getElementById('p3-bar').style.width      = p3Pct + '%';
+
+    // ── Dọn session để tránh F5 xem lại kết quả cũ ──
+    sessionStorage.removeItem('currentExam');
+});
+</script>
 </body>
 </html>
