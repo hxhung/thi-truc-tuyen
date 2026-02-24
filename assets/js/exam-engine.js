@@ -1,7 +1,15 @@
 /**
  * =====================================================
- * EXAM ENGINE - PHIÊN BẢN FINAL (ĐÃ FIX SYNTAX & TRÙNG LẶP)
- * Bổ sung lưu dữ liệu thô (dòng 327-341)
+ * EXAM ENGINE - Version 2.0
+ * =====================================================
+ * THAY ĐỔI SO VỚI V1:
+ *  [FIX]  Stable ID: dùng q.id ("Q2", "Q3"...) thay vì index mảng
+ *         → studentAnswers = { "Q2": "A", "Q7": "TRUE", ... }
+ *         → Chấm điểm đúng dù câu hỏi bị trộn
+ *  [NEW]  Trộn thứ tự câu hỏi trong từng phần (Fisher-Yates)
+ *  [NEW]  Trộn thứ tự đáp án A/B/C/D (Phần 1)
+ *         → Lưu originalLetter để gửi lên server đúng
+ *  [NEW]  Trộn thứ tự ý a/b/c/d trong từng nhóm (Phần 2)
  * =====================================================
  */
 
@@ -9,66 +17,88 @@
 // BIẾN TOÀN CỤC
 // =====================================================
 let currentQuestions = [];
-let studentAnswers = {};
-let sessionData = null;
-let timerInterval = null;
-let timeLeft = 0;
-let submitted = false;
+let studentAnswers   = {};
+let sessionData      = null;
+let timerInterval    = null;
+let timeLeft         = 0;
+let submitted        = false;
+
 
 // =====================================================
-// 1. KHỞI TẠO BÀI THI (INIT EXAM)
+// 1. KHỞI TẠO BÀI THI
 // =====================================================
 window.initExam = function(data) {
     console.log("🚀 Khởi tạo bài thi:", data);
-    
+
     if (!data || !data.questions) {
         alert("❌ Lỗi: Không có dữ liệu đề thi!");
         window.location.href = 'index.html';
         return;
     }
-    
+
     sessionData = data;
-    
-    // --- XỬ LÝ CÂU HỎI ---
+
+    // --- LỌC CÂU HỎI THEO MÃ ĐỀ ---
     const allQuestions = data.questions || [];
     let lastContentRoot = "";
 
-    // Lọc câu hỏi theo mã đề
-    let filteredQuestions = allQuestions.filter(q => {
-        const qId = q.ExamID || q.examId || q.MaDe || ""; 
-        return String(qId).trim().toLowerCase() === String(sessionData.examId).trim().toLowerCase();
+    let filtered = allQuestions.filter(q => {
+        const qId = String(q.ExamID || q.examId || q.MaDe || "").trim().toLowerCase();
+        return qId === String(sessionData.examId).trim().toLowerCase();
     });
 
-    // Xử lý câu hỏi & gán ID
-    currentQuestions = filteredQuestions.map((q, index) => {
-        if (q.Type === "TN_DUNG_SAI" || q.Type === "TRUE_FALSE") {
-            const root = q.Content_Root || q.Question_Root;
-            if (root) {
-                lastContentRoot = root;
+    // --- CHUẨN HÓA TYPE & GÁN STABLE ID ---
+    currentQuestions = filtered.map(q => {
+        // Chuẩn hóa Type
+        if (q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
+        if (q.Type === 'TN_DUNG_SAI')                    q.Type = 'TRUE_FALSE';
+
+        // Kế thừa Content_Root cho TRUE_FALSE nếu thiếu
+        if (q.Type === 'TRUE_FALSE') {
+            if (q.Content_Root && String(q.Content_Root).trim() !== '') {
+                lastContentRoot = q.Content_Root;
             } else {
                 q.Content_Root = lastContentRoot;
             }
         }
-        q.QuestionID = String(index); 
-        if (q.Type === 'FILL_IN' || q.Type === 'TuLuan') q.Type = 'SHORT_ANSWER';
-        if (q.Type === 'TN_DUNG_SAI') q.Type = 'TRUE_FALSE';
+
+        // [FIX] Stable ID: dùng q.id từ Backend (v4.1), KHÔNG dùng index mảng
+        // Backend trả về q.id = "Q2", "Q3", ... (số hàng thực trong Sheet)
+        if (!q.id) {
+            // Fallback an toàn nếu Backend cũ chưa có q.id
+            console.warn("⚠️ Câu hỏi thiếu q.id, dùng fallback. Hãy đảm bảo Backend v4.1 đã deploy.");
+            q.id = "FALLBACK_" + Math.random().toString(36).slice(2);
+        }
+
         return q;
     });
 
     console.log("✅ Đã load", currentQuestions.length, "câu hỏi");
 
-    // --- XỬ LÝ THỜI GIAN ---
-    let durationMin = parseInt(data.duration) || parseInt(data.Duration) || parseInt(data.Duration_Min);
-    if (!durationMin || isNaN(durationMin) || durationMin <= 0) {
-        durationMin = 60;
-    }
-    
+    // --- THỜI GIAN ---
+    let durationMin = parseInt(data.duration) || parseInt(data.Duration) || 60;
+    if (isNaN(durationMin) || durationMin <= 0) durationMin = 60;
+
     renderQuestions();
     startTimer(durationMin);
 };
 
+
 // =====================================================
-// 2. RENDER GIAO DIỆN CÂU HỎI
+// 2. SHUFFLE (FISHER-YATES) — KHÔNG THAY ĐỔI MẢNG GỐC
+// =====================================================
+function shuffle(arr) {
+    const a = [...arr]; // Clone, không mutate mảng gốc
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+
+// =====================================================
+// 3. RENDER GIAO DIỆN CÂU HỎI
 // =====================================================
 function renderQuestions() {
     const container = document.getElementById('exam-container');
@@ -79,132 +109,220 @@ function renderQuestions() {
     if (titleEl && sessionData) {
         titleEl.innerText = `ĐỀ: ${sessionData.title || sessionData.examId}`;
     }
-    
-    const getMainText = (q) => q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || "";
-    const getSubText = (q) => q.Content_Sub || q.Content || q.Question || "";
-    const getImg = (q) => q.Image || q.Image_URL || q.HinhAnh || null;
-    const getID = (q) => q.QuestionID;
 
-    const parts = { "MULTIPLE_CHOICE": [], "TRUE_FALSE": [], "SHORT_ANSWER": [] };
-    const partTitles = {
-        "MULTIPLE_CHOICE": "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
-        "TRUE_FALSE": "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
-        "SHORT_ANSWER": "PHẦN 3: TRẢ LỜI NGẮN"
-    };
+    // --- PHÂN LOẠI 3 PHẦN ---
+    const part1 = currentQuestions.filter(q => q.Type === 'MULTIPLE_CHOICE');
+    const part2 = currentQuestions.filter(q => q.Type === 'TRUE_FALSE');
+    const part3 = currentQuestions.filter(q => q.Type === 'SHORT_ANSWER');
 
-    currentQuestions.forEach(q => {
-        let type = q.Type || "MULTIPLE_CHOICE";
-        if (type === 'FILL_IN' || type === 'TuLuan') type = 'SHORT_ANSWER';
-        if (type === 'TN_DUNG_SAI') type = 'TRUE_FALSE';
-        if (parts[type]) parts[type].push(q);
-    });
+    // [NEW] Trộn thứ tự câu trong từng phần
+    const shuffledPart1 = shuffle(part1);
+    const shuffledPart3 = shuffle(part3);
+
+    // [NEW] Trộn nhóm Phần 2, rồi trộn ý trong từng nhóm
+    const part2Groups = groupByRoot(part2);
+    const shuffledGroups = shuffle(part2Groups).map(group => ({
+        root:  group.root,
+        items: shuffle(group.items)  // Trộn a/b/c/d trong nhóm
+    }));
 
     let html = '';
-    const createHeader = (idx, content, img) => `
-        <div class="question-header">
-            <div class="q-badge">Câu ${idx}</div>
-            <div class="q-content">
-                ${content}
-                ${img ? `<div style="margin-top:10px"><img src="${img}" alt="Minh họa" class="question-image"></div>` : ''}
-            </div>
-        </div>`;
+    const partTitles = {
+        1: "PHẦN 1: TRẮC NGHIỆM KHÁCH QUAN",
+        2: "PHẦN 2: TRẮC NGHIỆM ĐÚNG SAI",
+        3: "PHẦN 3: TRẢ LỜI NGẮN"
+    };
 
     // --- RENDER PHẦN 1 ---
-    if (parts["MULTIPLE_CHOICE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["MULTIPLE_CHOICE"]}</div>`;
-        parts["MULTIPLE_CHOICE"].forEach((q, i) => {
-            const realIdx = i + 1;
-            const qID = getID(q);
-            const savedVal = studentAnswers[qID] || "";
+    if (shuffledPart1.length > 0) {
+        html += `<div class="exam-part-card">
+                    <div class="part-title">${partTitles[1]}</div>`;
+
+        shuffledPart1.forEach((q, i) => {
+            // [NEW] Trộn đáp án A/B/C/D, giữ originalLetter để lưu đúng
+            const rawOptions = ['A', 'B', 'C', 'D']
+                .map(letter => ({
+                    originalLetter: letter,
+                    text: q['Option_' + letter] || ''
+                }))
+                .filter(opt => opt.text.trim() !== '');
+
+            const shuffledOptions = shuffle(rawOptions);
+            const savedVal = studentAnswers[q.id] || "";
+
             html += `<div class="question-item">
-                ${createHeader(realIdx, getMainText(q), getImg(q))}
+                ${buildHeader(i + 1, getMainText(q), getImg(q))}
                 <div class="options-grid">
-                    ${['A','B','C','D'].map(opt => {
-                        const optVal = q['Option_' + opt] || q[opt] || ''; 
-                        const checked = savedVal === opt ? 'checked' : '';
-                        return `<label class="option-item"><input type="radio" name="q_${qID}" value="${opt}" ${checked} onchange="saveAnswer('${qID}', '${opt}')"><span><b>${opt}.</b> ${optVal}</span></label>`;
+                    ${shuffledOptions.map(opt => {
+                        const checked = savedVal === opt.originalLetter ? 'checked' : '';
+                        // [FIX] Lưu originalLetter (A/B/C/D thực trong DB), không lưu vị trí hiển thị
+                        return `<label class="option-item">
+                            <input type="radio"
+                                   name="q_${q.id}"
+                                   value="${opt.originalLetter}"
+                                   ${checked}
+                                   onchange="saveAnswer('${q.id}', '${opt.originalLetter}')">
+                            <span>${opt.text}</span>
+                        </label>`;
                     }).join('')}
                 </div>
             </div>`;
         });
+
         html += `</div>`;
     }
 
     // --- RENDER PHẦN 2 ---
-    if (parts["TRUE_FALSE"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["TRUE_FALSE"]}</div>`;
-        let currentRoot = "###INIT###";
-        let globalIdx = parts["MULTIPLE_CHOICE"].length;
-        let subIdx = 0;
-        let isGroupOpen = false;
+    if (shuffledGroups.length > 0) {
+        html += `<div class="exam-part-card">
+                    <div class="part-title">${partTitles[2]}</div>`;
 
-        parts["TRUE_FALSE"].forEach((q) => {
-            const rootText = q.Content_Root || q.Question_Root || "Đề bài chung";
-            const qID = getID(q);
-            
-            if (rootText !== currentRoot) {
-                if (isGroupOpen) { html += `</div></div>`; isGroupOpen = false; }
-                currentRoot = rootText;
-                globalIdx++;
-                subIdx = 0;
-                html += `<div class="question-item">${createHeader(globalIdx, currentRoot, null)}<div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
-                isGroupOpen = true;
-            }
+        shuffledGroups.forEach((group, groupIdx) => {
+            html += `<div class="question-item">
+                ${buildHeader(
+                    shuffledPart1.length + groupIdx + 1,
+                    group.root,
+                    null
+                )}
+                <div class="tf-container" style="margin-top:15px; padding-left:5px;">`;
 
-            const labelChar = String.fromCharCode(97 + (subIdx++ % 4));
-            const sVal = studentAnswers[qID] || "";
-            html += `<div class="tf-row">
-                <span style="flex:1; font-size: 1rem; padding-right:10px;"><b>${labelChar})</b> ${getSubText(q)}</span>
-                <div class="tf-options">
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="TRUE" ${sVal==='TRUE'?'checked':''} onchange="saveAnswer('${qID}', 'TRUE')"> ĐÚNG</label>
-                    <label class="tf-btn"><input type="radio" name="q_${qID}" value="FALSE" ${sVal==='FALSE'?'checked':''} onchange="saveAnswer('${qID}', 'FALSE')"> SAI</label>
-                </div>
-            </div>`;
+            group.items.forEach((q, subIdx) => {
+                const labelChar = String.fromCharCode(97 + subIdx); // a, b, c, d
+                const savedVal  = studentAnswers[q.id] || "";
+
+                html += `<div class="tf-row">
+                    <span style="flex:1; font-size:1rem; padding-right:10px;">
+                        <b>${labelChar})</b> ${getSubText(q)}
+                    </span>
+                    <div class="tf-options">
+                        <label class="tf-btn">
+                            <input type="radio"
+                                   name="q_${q.id}"
+                                   value="TRUE"
+                                   ${savedVal === 'TRUE' ? 'checked' : ''}
+                                   onchange="saveAnswer('${q.id}', 'TRUE')">
+                            ĐÚNG
+                        </label>
+                        <label class="tf-btn">
+                            <input type="radio"
+                                   name="q_${q.id}"
+                                   value="FALSE"
+                                   ${savedVal === 'FALSE' ? 'checked' : ''}
+                                   onchange="saveAnswer('${q.id}', 'FALSE')">
+                            SAI
+                        </label>
+                    </div>
+                </div>`;
+            });
+
+            html += `</div></div>`;
         });
-        if (isGroupOpen) html += `</div></div>`;
+
         html += `</div>`;
     }
 
     // --- RENDER PHẦN 3 ---
-    if (parts["SHORT_ANSWER"].length > 0) {
-        html += `<div class="exam-part-card"><div class="part-title">${partTitles["SHORT_ANSWER"]}</div>`;
-        let currentIdx = parts["MULTIPLE_CHOICE"].length + (new Set(parts["TRUE_FALSE"].map(x => x.Content_Root || x.Question_Root))).size;
-        parts["SHORT_ANSWER"].forEach((q) => {
-            currentIdx++;
-            const qID = getID(q);
-            const sVal = studentAnswers[qID] || "";
+    if (shuffledPart3.length > 0) {
+        html += `<div class="exam-part-card">
+                    <div class="part-title">${partTitles[3]}</div>`;
+
+        const p3StartIdx = shuffledPart1.length + shuffledGroups.length;
+
+        shuffledPart3.forEach((q, i) => {
+            const savedVal = studentAnswers[q.id] || "";
+
             html += `<div class="question-item">
-                ${createHeader(currentIdx, getMainText(q), getImg(q))}
+                ${buildHeader(p3StartIdx + i + 1, getMainText(q), getImg(q))}
                 <div class="fill-input-container">
-                    <input type="text" class="fill-input" placeholder="Nhập đáp án..." value="${sVal}" onchange="saveAnswer('${qID}', this.value)">
+                    <input type="text"
+                           class="fill-input"
+                           placeholder="Nhập đáp án..."
+                           value="${savedVal}"
+                           onchange="saveAnswer('${q.id}', this.value)">
                 </div>
             </div>`;
         });
+
         html += `</div>`;
     }
 
     container.innerHTML = html;
-    
+
     // Render KaTeX
     if (window.renderMathInElement) {
-        try { renderMathInElement(container, { delimiters: [{left: "$$", right: "$$", display: true}, {left: "$", right: "$", display: false}] }); } catch(e) {}
+        try {
+            renderMathInElement(container, {
+                delimiters: [
+                    { left: "$$", right: "$$", display: true  },
+                    { left: "$",  right: "$",  display: false }
+                ]
+            });
+        } catch(e) { console.warn("KaTeX error:", e); }
     }
 }
 
+
 // =====================================================
-// 3. XỬ LÝ ĐỒNG HỒ & HẾT GIỜ
+// 4. HELPER — GOM NHÓM TRUE_FALSE THEO CONTENT_ROOT
+// =====================================================
+function groupByRoot(tfQuestions) {
+    const map = new Map(); // Dùng Map để giữ thứ tự chèn
+
+    tfQuestions.forEach(q => {
+        const root = String(q.Content_Root || "Nhóm_" + q.id).trim();
+        if (!map.has(root)) map.set(root, []);
+        map.get(root).push(q);
+    });
+
+    return Array.from(map.entries()).map(([root, items]) => ({ root, items }));
+}
+
+
+// =====================================================
+// 5. HELPER — LẤY TEXT VÀ ẢNH TỪ OBJECT CÂU HỎI
+// =====================================================
+function getMainText(q) {
+    return q.Content_Root || q.Content || q.Question || q.DeBai || q.NoiDung || "";
+}
+
+function getSubText(q) {
+    return q.Content_Sub || q.Content || q.Question || "";
+}
+
+function getImg(q) {
+    return q.Image || q.Image_URL || q.HinhAnh || null;
+}
+
+function buildHeader(idx, content, img) {
+    return `<div class="question-header">
+        <div class="q-badge">Câu ${idx}</div>
+        <div class="q-content">
+            ${content}
+            ${img ? `<div style="margin-top:10px">
+                        <img src="${img}" alt="Minh họa" class="question-image">
+                     </div>` : ''}
+        </div>
+    </div>`;
+}
+
+
+// =====================================================
+// 6. ĐỒNG HỒ ĐẾM NGƯỢC
 // =====================================================
 function startTimer(minutes) {
     if (timerInterval) clearInterval(timerInterval);
 
-    // Tính thời gian
+    // Tính thời gian còn lại (trừ đi thời gian đã trôi qua từ lúc đăng nhập)
     if (sessionData && sessionData.startToken) {
-        const now = Date.now();
-        const startTime = parseInt(sessionData.startToken);
-        const elapsedSeconds = Math.floor((now - startTime) / 1000);
-        timeLeft = (minutes * 60) - elapsedSeconds;
+        const elapsed = Math.floor((Date.now() - parseInt(sessionData.startToken)) / 1000);
+        timeLeft = (minutes * 60) - elapsed;
     } else {
         timeLeft = minutes * 60;
+    }
+
+    if (timeLeft <= 0) {
+        submitFinal();
+        return;
     }
 
     updateTimerDisplay();
@@ -215,148 +333,136 @@ function startTimer(minutes) {
 
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
-            
-            // --- LOGIC HẾT GIỜ (3-2-1) ---
-            
-            // 1. Chặn thao tác
-            const container = document.getElementById('exam-container');
-            if(container) {
-                container.style.pointerEvents = 'none';
-                container.style.opacity = '0.5';
-            }
-
-            // 2. Hiện Modal đếm ngược
-            const timeoutHTML = `
-                <div id="timeout-modal" class="modal-overlay">
-                    <div class="modal-box">
-                        <h2 style="color: #e53e3e;">⏰ HẾT GIỜ!</h2>
-                        <p>Hệ thống đang thu bài...</p>
-                        <div id="cd-sync" class="countdown-number">3</div>
-                    </div>
-                </div>`;
-            document.body.insertAdjacentHTML('beforeend', timeoutHTML);
-
-            // 3. Đếm lùi 3s rồi nộp
-            let count = 3;
-            const cd = setInterval(() => {
-                count--;
-                const numEl = document.getElementById('cd-sync');
-                if (numEl) numEl.innerText = count;
-
-                if (count <= 0) {
-                    clearInterval(cd);
-                    submitFinal(); // Gọi nộp bài
-                }
-            }, 1000);
+            onTimeUp();
         }
-    }, 1000); 
+    }, 1000);
 }
 
 function updateTimerDisplay() {
-    const timerEl = document.getElementById('timer');
-    if (!timerEl) return;
+    const el = document.getElementById('timer');
+    if (!el) return;
     if (timeLeft < 0) timeLeft = 0;
     const m = Math.floor(timeLeft / 60);
     const s = timeLeft % 60;
-    timerEl.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
-    if (timeLeft < 300) timerEl.style.color = 'red';
+    el.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+    el.style.color = timeLeft < 300 ? 'red' : '';
 }
 
+function onTimeUp() {
+    // Khóa thao tác
+    const container = document.getElementById('exam-container');
+    if (container) {
+        container.style.pointerEvents = 'none';
+        container.style.opacity = '0.5';
+    }
+
+    // Modal đếm ngược 3-2-1
+    document.body.insertAdjacentHTML('beforeend', `
+        <div id="timeout-modal" class="modal-overlay">
+            <div class="modal-box">
+                <h2 style="color:#e53e3e;">⏰ HẾT GIỜ!</h2>
+                <p>Hệ thống đang thu bài...</p>
+                <div id="cd-sync" class="countdown-number">3</div>
+            </div>
+        </div>`);
+
+    let count = 3;
+    const cd = setInterval(() => {
+        count--;
+        const el = document.getElementById('cd-sync');
+        if (el) el.innerText = count;
+        if (count <= 0) { clearInterval(cd); submitFinal(); }
+    }, 1000);
+}
+
+
 // =====================================================
-// 4. LƯU & NỘP BÀI
+// 7. LƯU & NỘP BÀI
 // =====================================================
-window.saveAnswer = function(qIndex, value) {
-    studentAnswers[qIndex] = value;
+window.saveAnswer = function(qId, value) {
+    // [FIX] Key là q.id ("Q2", "Q7"...) — Stable ID, không phải vị trí hiển thị
+    studentAnswers[qId] = value;
     if (!submitted && sessionData) {
-        localStorage.setItem(`autosave_${sessionData.examId}`, JSON.stringify(studentAnswers));
+        localStorage.setItem(
+            `autosave_${sessionData.examId}`,
+            JSON.stringify(studentAnswers)
+        );
     }
 };
 
-window.finishExam = function(forced = false) {
+window.finishExam = function() {
     if (submitted) return;
-    
-    // Nếu bị ép buộc (do hết giờ) -> Gọi nộp luôn
-    if (forced === true) {
-        submitFinal();
-        return;
-    }
 
-    // Nếu người dùng bấm -> Hiện modal xác nhận (ID khớp với exam.html)
     const modal = document.getElementById('confirm-modal');
     if (modal) {
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
     } else {
-        if(confirm("Nộp bài ngay?")) submitFinal();
+        if (confirm("Nộp bài ngay?")) submitFinal();
     }
 };
 
 window.closeModal = function() {
     const modal = document.getElementById('confirm-modal');
-    if(modal) modal.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
     document.body.style.overflow = 'auto';
 };
 
-// HÀM NỘP BÀI DUY NHẤT (Đã tích hợp Modal Processing)
 window.submitFinal = async function() {
     if (submitted) return;
     submitted = true;
 
     if (timerInterval) clearInterval(timerInterval);
 
-    // Ẩn modal xác nhận
+    // Ẩn modal xác nhận, hiện modal đang chấm
     const confirmModal = document.getElementById('confirm-modal');
-    if(confirmModal) confirmModal.classList.add('hidden');
-    
-    // Hiện modal đang chấm (ID khớp với exam.html)
+    if (confirmModal) confirmModal.classList.add('hidden');
+
     const procModal = document.getElementById('processing-modal');
     if (procModal) procModal.classList.remove('hidden');
 
     try {
-        // Gọi API
         const result = await submitExam({
-            examId: sessionData.examId,
-            studentName: sessionData.studentName,
+            examId:       sessionData.examId,
+            studentName:  sessionData.studentName,
             studentClass: sessionData.studentClass,
-            answers: studentAnswers,
-            usedTime: (parseInt(sessionData.duration) * 60) - timeLeft
+            // [FIX] studentAnswers giờ là { "Q2": "A", "Q7": "TRUE", ... }
+            // Backend v4.1 tra cứu answers[q.id] → khớp hoàn toàn
+            answers:      studentAnswers,
+            usedTime:     (parseInt(sessionData.duration) * 60) - timeLeft
         });
 
         if (result.success) {
-			// --- 1. LOGGING (LƯU DỮ LIỆU THÔ) ---
+            // Lưu log
             try {
-                // Sử dụng key riêng để tránh nhầm lẫn với các hệ thống khác
-                const rawHistory = JSON.parse(localStorage.getItem('online_exam_logs') || '[]');
-                
-                // Chỉ push nguyên cục session và result vào, không xử lý gì cả
-                rawHistory.push({
+                const logs = JSON.parse(localStorage.getItem('online_exam_logs') || '[]');
+                logs.push({
                     timestamp: new Date().toISOString(),
-                    session: sessionData, // Chứa tên đề, tên học sinh...
-                    result: result        // Chứa điểm số, chi tiết đáp án...
+                    session:   sessionData,
+                    result:    result
                 });
+                localStorage.setItem('online_exam_logs', JSON.stringify(logs));
+            } catch(e) { console.error("Log error:", e); }
 
-                localStorage.setItem('online_exam_logs', JSON.stringify(rawHistory));
-            } catch (e) {
-                console.error("Save log error:", e);
-            }
-            // --- KẾT THÚC LOGGING ---
             localStorage.removeItem(`autosave_${sessionData.examId}`);
             sessionStorage.setItem('examResult', JSON.stringify(result));
             window.location.href = 'result.html';
         } else {
             throw new Error(result.message || 'Lỗi server');
         }
-    } catch (e) {
+
+    } catch(e) {
         console.error("Lỗi nộp bài:", e);
         if (procModal) procModal.classList.add('hidden');
         alert('❌ Lỗi: ' + e.message + '\nẤn OK để thử nộp lại.');
-        submitted = false; 
+        submitted = false;
         document.body.style.overflow = 'auto';
     }
 };
 
+
 // =====================================================
-// 5. KHỞI ĐỘNG
+// 8. KHỞI ĐỘNG
 // =====================================================
 document.addEventListener('DOMContentLoaded', () => {
     const rawData = sessionStorage.getItem('currentExam');
@@ -368,11 +474,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
         const data = JSON.parse(rawData);
-        const savedAns = localStorage.getItem(`autosave_${data.examId}`);
-        if (savedAns) studentAnswers = JSON.parse(savedAns);
-        
+
+        // Khôi phục autosave nếu có
+        const saved = localStorage.getItem(`autosave_${data.examId}`);
+        if (saved) {
+            studentAnswers = JSON.parse(saved);
+            console.log("♻️ Khôi phục autosave:", Object.keys(studentAnswers).length, "câu");
+        }
+
         initExam(data);
-    } catch (e) {
+    } catch(e) {
         console.error(e);
         window.location.href = 'index.html';
     }
