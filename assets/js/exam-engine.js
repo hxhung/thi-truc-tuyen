@@ -1,6 +1,6 @@
 /**
  * =====================================================
- * EXAM ENGINE - Version 2.0
+ * EXAM ENGINE - Version 2.1
  * =====================================================
  * THAY ĐỔI SO VỚI V1:
  *  [FIX]  Stable ID: dùng q.id ("Q2", "Q3"...) thay vì index mảng
@@ -10,6 +10,7 @@
  *  [NEW]  Trộn thứ tự đáp án A/B/C/D (Phần 1)
  *         → Lưu originalLetter để gửi lên server đúng
  *  [NEW]  Trộn thứ tự ý a/b/c/d trong từng nhóm (Phần 2)
+ *  Hình ảnh: đường dẫn tương đối: images/[Mã đề]/Tên_file.png 
  * =====================================================
  */
 
@@ -290,7 +291,12 @@ function getSubText(q) {
 }
 
 function getImg(q) {
-    return q.Image || q.Image_URL || q.HinhAnh || null;
+    const file = q.Image || q.Image_URL || q.HinhAnh || null;
+    if (!file) return null;
+    // Nếu đã là URL đầy đủ thì giữ nguyên
+    if (String(file).startsWith('http')) return file;
+    // Tự động ghép đường dẫn images/[examId]/[tên file]
+    return `images/${sessionData.examId}/${file}`;
 }
 
 function buildHeader(idx, content, img) {
