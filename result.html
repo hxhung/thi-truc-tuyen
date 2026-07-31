@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kết Quả Bài Thi | Hệ Thống Thi Trực Tuyến</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="assets/js/huggingface-ai.js"></script>
     <style>
         :root {
             --primary:       #6366f1;
@@ -264,6 +265,354 @@
             padding: 20px;
         }
         .error-wrap h3 { color: var(--red); margin-bottom: 10px; }
+
+        /* ══════════════════════════════════════════
+           NÚT HỎI AI
+        ══════════════════════════════════════════ */
+        .btn-ai {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 13px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-ai:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+        }
+        .btn-ai svg { flex-shrink: 0; }
+
+        /* ══════════════════════════════════════════
+           CHAT OVERLAY
+        ══════════════════════════════════════════ */
+        .ai-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 16px;
+            animation: overlayIn 0.25s ease;
+        }
+        .ai-overlay.open { display: flex; }
+        @keyframes overlayIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        .ai-panel {
+            background: #0f0c29;
+            background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            width: 100%;
+            max-width: 520px;
+            height: 80vh;
+            max-height: 640px;
+            border-radius: 24px 24px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+            animation: panelUp 0.3s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        @keyframes panelUp {
+            from { transform: translateY(60px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* Header panel */
+        .ai-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .ai-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #7c3aed, #06b6d4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .ai-title {
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        .ai-subtitle {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.72rem;
+            display: block;
+        }
+        .ai-model-badge {
+            background: rgba(124,58,237,0.3);
+            color: #a78bfa;
+            font-size: 0.65rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 99px;
+            border: 1px solid rgba(124,58,237,0.4);
+        }
+        .ai-close {
+            background: rgba(255,255,255,0.08);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .ai-close:hover { background: rgba(255,255,255,0.18); color: #fff; }
+
+        /* Setup token */
+        .ai-setup {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            gap: 14px;
+        }
+        .ai-setup-icon { font-size: 48px; }
+        .ai-setup h3 {
+            color: #fff;
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-align: center;
+        }
+        .ai-setup p {
+            color: rgba(255,255,255,0.55);
+            font-size: 0.78rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+        .ai-setup p a {
+            color: #a78bfa;
+            text-decoration: none;
+        }
+        .ai-token-input {
+            width: 100%;
+            padding: 11px 14px;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.85rem;
+            outline: none;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+        .ai-token-input::placeholder { color: rgba(255,255,255,0.3); }
+        .ai-token-input:focus { border-color: #7c3aed; }
+        .ai-token-input.error-state { border-color: #ef4444; }
+        .btn-ai-connect {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-ai-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-ai-connect:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .ai-setup-error {
+            color: #f87171;
+            font-size: 0.78rem;
+            text-align: center;
+            min-height: 18px;
+        }
+
+        /* Messages */
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+        .ai-messages::-webkit-scrollbar { width: 4px; }
+        .ai-messages::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.15);
+            border-radius: 4px;
+        }
+
+        .msg-row {
+            display: flex;
+            gap: 8px;
+            animation: msgIn 0.2s ease;
+        }
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .msg-row.user { flex-direction: row-reverse; }
+
+        .msg-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .msg-avatar.ai-av { background: linear-gradient(135deg, #7c3aed, #06b6d4); }
+        .msg-avatar.user-av { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+        .msg-bubble {
+            max-width: 78%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 0.83rem;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .msg-row.ai .msg-bubble {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.92);
+            border-bottom-left-radius: 4px;
+        }
+        .msg-row.user .msg-bubble {
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Typing indicator */
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+        .typing-dots span {
+            width: 7px;
+            height: 7px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0);    opacity: 0.5; }
+            30%            { transform: translateY(-6px); opacity: 1;   }
+        }
+
+        /* Gợi ý câu hỏi */
+        .ai-suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 0 16px 10px;
+        }
+        .sug-btn {
+            background: rgba(124,58,237,0.2);
+            border: 1px solid rgba(124,58,237,0.4);
+            color: #c4b5fd;
+            padding: 5px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .sug-btn:hover {
+            background: rgba(124,58,237,0.4);
+            color: #fff;
+        }
+
+        /* Input area */
+        .ai-input-area {
+            padding: 12px 14px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .ai-textarea {
+            flex: 1;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 0.85rem;
+            resize: none;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.45;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .ai-textarea::placeholder { color: rgba(255,255,255,0.3); }
+        .ai-textarea:focus { border-color: rgba(124,58,237,0.6); }
+        .btn-send {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #7c3aed, #4f46e5);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .btn-send:hover { transform: scale(1.08); box-shadow: 0 4px 12px rgba(124,58,237,0.5); }
+        .btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Status bar */
+        .ai-status {
+            text-align: center;
+            padding: 6px;
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.35);
+        }
     </style>
 </head>
 <body>
@@ -331,6 +680,94 @@
     </div>
 
     <a href="https://hxhung.github.io/web-trac-nghiem/" class="btn-home">Quay lại Trang chủ</a>
+
+    <!-- NÚT MỞ CHAT AI -->
+    <button class="btn-ai" id="btn-open-ai" onclick="openAIChat()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+            <path d="M12 6v6l4 2"/>
+        </svg>
+        🤖 Hỏi AI về bài thi
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     AI CHAT PANEL
+════════════════════════════════════════════════════ -->
+<div class="ai-overlay" id="ai-overlay">
+    <div class="ai-panel" id="ai-panel">
+
+        <!-- Header -->
+        <div class="ai-header">
+            <div class="ai-header-left">
+                <div class="ai-avatar">🤖</div>
+                <div>
+                    <div class="ai-title">Trợ Lý AI Toán Học</div>
+                    <span class="ai-subtitle" id="ai-subtitle">Hugging Face AI</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <span class="ai-model-badge" id="ai-model-badge">Chưa kết nối</span>
+                <button class="ai-close" onclick="closeAIChat()" title="Đóng">✕</button>
+            </div>
+        </div>
+
+        <!-- SETUP TOKEN (hiện khi chưa có token) -->
+        <div class="ai-setup" id="ai-setup">
+            <div class="ai-setup-icon">🔑</div>
+            <h3>Kết nối Hugging Face AI</h3>
+            <p>
+                Nhập <strong style="color:#a78bfa">Hugging Face Token</strong> của bạn để sử dụng AI.<br>
+                Lấy miễn phí tại <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a>
+            </p>
+            <input
+                type="password"
+                class="ai-token-input"
+                id="ai-token-input"
+                placeholder="hf_..."
+                autocomplete="off"
+                spellcheck="false"
+            />
+            <div class="ai-setup-error" id="ai-setup-error"></div>
+            <button class="btn-ai-connect" id="btn-ai-connect" onclick="connectAI()">⚡ Kết nối AI</button>
+            <p style="font-size:0.7rem">Token được lưu an toàn trong trình duyệt của bạn</p>
+        </div>
+
+        <!-- CHAT UI (ẩn khi chưa kết nối) -->
+        <div id="ai-chat-ui" style="display:none;flex:1;flex-direction:column;overflow:hidden">
+
+            <!-- Messages -->
+            <div class="ai-messages" id="ai-messages"></div>
+
+            <!-- Gợi ý câu hỏi -->
+            <div class="ai-suggestions" id="ai-suggestions">
+                <button class="sug-btn" onclick="sendSuggestion(this)">Tôi làm sai những câu nào?</button>
+                <button class="sug-btn" onclick="sendSuggestion(this)">Giải thích điểm phần 1</button>
+                <button class="sug-btn" onclick="sendSuggestion(this)">Cách cải thiện điểm số?</button>
+                <button class="sug-btn" onclick="sendSuggestion(this)">Phần nào tôi làm tốt nhất?</button>
+            </div>
+
+            <!-- Input -->
+            <div class="ai-input-area">
+                <textarea
+                    class="ai-textarea"
+                    id="ai-textarea"
+                    placeholder="Hỏi AI về bài thi của bạn..."
+                    rows="1"
+                    onkeydown="handleAIKey(event)"
+                    oninput="autoResize(this)"
+                ></textarea>
+                <button class="btn-send" id="btn-send" onclick="sendAIMessage()" title="Gửi">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="ai-status" id="ai-status">Nhấn Enter để gửi • Shift+Enter để xuống dòng</div>
+        </div>
+
+    </div>
 </div>
 
 <script>
@@ -441,8 +878,310 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('p3-bar').style.width      = p3Pct + '%';
 
     // ── Dọn session để tránh F5 xem lại kết quả cũ ──
-    sessionStorage.removeItem('currentExam');
+    // (Giữ lại để AI có thể đọc ngữ cảnh — sẽ xóa khi đóng panel)
+    // sessionStorage.removeItem('currentExam');
+
+    // ── Khởi tạo AI nếu đã có token ──
+    if (HuggingFaceAI.loadToken() && HuggingFaceAI.hasToken()) {
+        initAIWithSavedToken(data, student);
+    }
 });
+
+// ════════════════════════════════════════════════════
+// AI CHAT LOGIC
+// ════════════════════════════════════════════════════
+
+let _aiResultData = null;
+let _aiStudentData = null;
+let _aiIsTyping = false;
+
+/** Mở panel AI */
+function openAIChat() {
+    const overlay = document.getElementById('ai-overlay');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Tự động tải giao diện chat nếu AI đã được khởi tạo (từ token fallback hoặc token lưu sẵn)
+    if (HuggingFaceAI.isReady()) {
+        showChatUI(HuggingFaceAI.getModelName());
+        const messagesEl = document.getElementById('ai-messages');
+        if (messagesEl && messagesEl.children.length === 0) {
+            sendWelcomeMessage();
+        }
+    }
+}
+
+/** Đóng panel AI */
+function closeAIChat() {
+    const overlay = document.getElementById('ai-overlay');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+    sessionStorage.removeItem('currentExam');
+}
+
+/** Đóng khi click ngoài panel */
+document.getElementById('ai-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAIChat();
+});
+
+/** Kết nối AI khi nhập token */
+async function connectAI() {
+    const tokenInput = document.getElementById('ai-token-input');
+    const errorEl    = document.getElementById('ai-setup-error');
+    const connectBtn = document.getElementById('btn-ai-connect');
+    const token = tokenInput.value.trim();
+
+    errorEl.textContent = '';
+    tokenInput.classList.remove('error-state');
+
+    if (!token || !token.startsWith('hf_')) {
+        tokenInput.classList.add('error-state');
+        errorEl.textContent = '⚠ Token phải bắt đầu bằng hf_';
+        return;
+    }
+
+    connectBtn.disabled = true;
+    connectBtn.textContent = '⏳ Đang kết nối...';
+
+    const result = await HuggingFaceAI.init(token);
+
+    if (!result.success) {
+        connectBtn.disabled = false;
+        connectBtn.textContent = '⚡ Kết nối AI';
+        tokenInput.classList.add('error-state');
+        errorEl.textContent = '✗ ' + (result.error || 'Kết nối thất bại. Kiểm tra lại token.');
+        return;
+    }
+
+    // Thành công
+    showChatUI(result.model);
+    sendWelcomeMessage();
+}
+
+/** Tự động kết nối nếu đã có token lưu */
+async function initAIWithSavedToken(data, student) {
+    _aiResultData  = data;
+    _aiStudentData = student;
+    const result = await HuggingFaceAI.init();
+    if (result.success) {
+        updateModelBadge(result.model);
+        document.getElementById('btn-open-ai').style.background
+            = 'linear-gradient(135deg, #059669, #0284c7)';
+    }
+}
+
+/** Hiện giao diện chat */
+function showChatUI(modelName) {
+    document.getElementById('ai-setup').style.display   = 'none';
+    const chatUI = document.getElementById('ai-chat-ui');
+    chatUI.style.display = 'flex';
+    chatUI.style.flex    = '1';
+    updateModelBadge(modelName);
+
+    // Nạp ngữ cảnh bài thi vào AI
+    loadExamContext();
+}
+
+function updateModelBadge(modelName) {
+    const badge = document.getElementById('ai-model-badge');
+    const shortName = (modelName || '').split('/').pop().substring(0, 20);
+    badge.textContent = '✓ ' + shortName;
+    badge.style.background = 'rgba(5,150,105,0.25)';
+    badge.style.color       = '#34d399';
+    badge.style.borderColor = 'rgba(5,150,105,0.4)';
+}
+
+/** Nạp ngữ cảnh bài thi */
+function loadExamContext() {
+    const rawResult  = sessionStorage.getItem('examResult');
+    const rawExam    = sessionStorage.getItem('currentExam');
+    if (!rawResult) return;
+
+    const data    = JSON.parse(rawResult);
+    const student = JSON.parse(rawExam || '{}');
+    const res     = data.result || {};
+
+    const context = `
+Thí sinh: ${student.studentName || 'Không rõ'}
+Lớp: ${student.studentClass || 'Không rõ'}
+Mã đề: ${student.examId || 'Không rõ'}
+Điểm tổng: ${parseFloat(res.finalScore || 0).toFixed(2)}/10
+Phần I (Trắc nghiệm): ${parseFloat((res.p1 || {}).score || 0).toFixed(2)} điểm — Đúng ${(res.p1||{}).correct||0}/${(res.p1||{}).total||0} câu
+Phần II (Đúng/Sai): ${parseFloat((res.p2 || {}).score || 0).toFixed(2)} điểm — ${(res.p2||{}).total||0} nhóm
+Phần III (Trả lời ngắn): ${parseFloat((res.p3 || {}).score || 0).toFixed(2)} điểm — Đúng ${(res.p3||{}).correct||0}/${(res.p3||{}).total||0} câu`;
+
+    HuggingFaceAI.resetHistory(context.trim());
+    _aiResultData  = res;
+    _aiStudentData = student;
+}
+
+/** Tin nhắn chào mừng */
+function sendWelcomeMessage() {
+    const rawExam = sessionStorage.getItem('currentExam');
+    const student = JSON.parse(rawExam || '{}');
+    const name    = (student.studentName || 'bạn').split(' ').pop();
+
+    const rawResult = sessionStorage.getItem('examResult');
+    const res       = rawResult ? (JSON.parse(rawResult).result || {}) : {};
+    const score     = parseFloat(res.finalScore || 0).toFixed(2);
+
+    const emoji = parseFloat(score) >= 8 ? '🎉' : parseFloat(score) >= 5 ? '📚' : '💪';
+    const msg   = `${emoji} Xin chào ${name}! Bạn đạt <strong>${score} điểm</strong>. Tôi có thể giúp bạn giải thích kết quả, phân tích điểm yếu, hoặc hướng dẫn ôn tập. Bạn muốn hỏi gì?`;
+
+    appendAIMessage(msg);
+}
+
+/** Gửi tin nhắn gợi ý */
+function sendSuggestion(btn) {
+    const text = btn.textContent.trim();
+    document.getElementById('ai-textarea').value = text;
+    sendAIMessage();
+    // Ẩn gợi ý sau lần dùng đầu
+    document.getElementById('ai-suggestions').style.display = 'none';
+}
+
+/** Gửi tin nhắn */
+async function sendAIMessage() {
+    const textarea = document.getElementById('ai-textarea');
+    const sendBtn  = document.getElementById('btn-send');
+    const question = textarea.value.trim();
+
+    if (!question || _aiIsTyping) return;
+    if (!HuggingFaceAI.isReady()) {
+        appendAIMessage('⚠ AI chưa kết nối. Vui lòng nhập token và kết nối trước.');
+        return;
+    }
+
+    // Hiện tin user
+    appendUserMessage(question);
+    textarea.value = '';
+    textarea.style.height = 'auto';
+
+    // Ẩn gợi ý
+    document.getElementById('ai-suggestions').style.display = 'none';
+
+    // Typing indicator
+    _aiIsTyping = true;
+    sendBtn.disabled = true;
+    const typingId = showTyping();
+
+    // Tạo bubble AI rỗng để stream vào
+    const bubble = createAIBubble();
+    let fullText = '';
+
+    await HuggingFaceAI.askStream(
+        question,
+        (chunk, full) => {
+            // Xóa typing indicator khi nhận chunk đầu tiên
+            if (typingId) removeTyping(typingId);
+            fullText = full;
+            bubble.textContent = full;
+            scrollToBottom();
+        },
+        () => {
+            // Done
+            _aiIsTyping = false;
+            sendBtn.disabled = false;
+            textarea.focus();
+            updateStatus();
+        },
+        (err) => {
+            removeTyping(typingId);
+            bubble.textContent = '⚠ Lỗi: ' + err;
+            _aiIsTyping = false;
+            sendBtn.disabled = false;
+        }
+    );
+}
+
+/** Phím tắt */
+function handleAIKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAIMessage();
+    }
+}
+
+/** Auto resize textarea */
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ── DOM Helpers ──
+
+function appendUserMessage(text) {
+    const msgs = document.getElementById('ai-messages');
+    const row  = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = `
+        <div class="msg-avatar user-av">👤</div>
+        <div class="msg-bubble">${escapeHtml(text)}</div>`;
+    msgs.appendChild(row);
+    scrollToBottom();
+}
+
+function appendAIMessage(html) {
+    const msgs = document.getElementById('ai-messages');
+    const row  = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.innerHTML = `
+        <div class="msg-avatar ai-av">🤖</div>
+        <div class="msg-bubble">${html}</div>`;
+    msgs.appendChild(row);
+    scrollToBottom();
+    return row.querySelector('.msg-bubble');
+}
+
+function createAIBubble() {
+    const msgs = document.getElementById('ai-messages');
+    const row  = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.innerHTML = `
+        <div class="msg-avatar ai-av">🤖</div>
+        <div class="msg-bubble"></div>`;
+    msgs.appendChild(row);
+    scrollToBottom();
+    return row.querySelector('.msg-bubble');
+}
+
+let _typingEl = null;
+function showTyping() {
+    const msgs = document.getElementById('ai-messages');
+    const row  = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.id = 'typing-indicator';
+    row.innerHTML = `
+        <div class="msg-avatar ai-av">🤖</div>
+        <div class="typing-dots"><span></span><span></span><span></span></div>`;
+    msgs.appendChild(row);
+    scrollToBottom();
+    return row;
+}
+
+function removeTyping(el) {
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function scrollToBottom() {
+    const msgs = document.getElementById('ai-messages');
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function updateStatus() {
+    const count = HuggingFaceAI.getMessageCount();
+    document.getElementById('ai-status').textContent =
+        `${count / 2 | 0} lượt hỏi • Nhấn Enter để gửi • Shift+Enter xuống dòng`;
+}
+
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '<br>');
+}
 </script>
 </body>
 </html>

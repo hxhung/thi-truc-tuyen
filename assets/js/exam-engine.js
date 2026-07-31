@@ -249,16 +249,18 @@ function renderQuestions() {
 
     container.innerHTML = html;
 
-    // Render KaTeX
+    // Render KaTeX tối ưu (Tránh block UI thread)
     if (window.renderMathInElement) {
-        try {
-            renderMathInElement(container, {
-                delimiters: [
-                    { left: "$$", right: "$$", display: true  },
-                    { left: "$",  right: "$",  display: false }
-                ]
-            });
-        } catch(e) { console.warn("KaTeX error:", e); }
+        requestAnimationFrame(() => {
+            try {
+                renderMathInElement(container, {
+                    delimiters: [
+                        { left: "$$", right: "$$", display: true  },
+                        { left: "$",  right: "$",  display: false }
+                    ]
+                });
+            } catch(e) { console.warn("KaTeX error:", e); }
+        });
     }
 }
 
