@@ -22,12 +22,11 @@ if errorlevel 1 (
 echo Starting server at: %CD%
 echo.
 
-:: Mở trình duyệt sau 2 giây để đảm bảo server đã kịp khởi động
-timeout /t 2 /nobreak >nul
-start "" http://localhost:8000
+:: [MODIFIED 31/07/2026] Đổi port sang 8001 để tránh xung đột với Server Root (8000) và Web Trắc Nghiệm (8002)
+start "" http://localhost:8001
 
 :: Chạy server trực tiếp trong thư mục hiện tại đã được cd ở trên
-python -m http.server 8000
+python -m http.server 8001
 
 echo.
 echo Server stopped.
