@@ -146,7 +146,8 @@ async function checkAndStart(){
  const eid=el.examId.value.trim().toUpperCase();
  clearMsg();
  if(!name||name.length<3)return error('Vui lòng nhập họ tên hợp lệ');
- if(!/^(10|11|12)[A-Z][0-9]?$/.test(cls))return error('Lớp không đúng định dạng');
+ // Cập nhật regex cho phép các lớp THPT (10, 11, 12) có số lớp lớn hơn 9 (VD: 12A10, 12A11) và ký tự hợp lệ
+ if(!/^(10|11|12)[A-Za-z0-9\s\-]+$/.test(cls))return error('Lớp không đúng định dạng');
  if(!/^[A-Z0-9]+$/.test(eid))return error('Mã đề không hợp lệ');
  if(typeof checkExamAccess!=='function')return error('Lỗi kết nối hệ thống');
  el.btn.disabled=true;el.btn.innerHTML='<span class="spinner"></span> Đang xử lý';

@@ -15,13 +15,15 @@ const HuggingFaceAI = (() => {
     const HF_API_BASE = "https://api-inference.huggingface.co/v1/chat/completions";
 
     /**
-     * Danh sách model ưu tiên (thử lần lượt nếu model trước lỗi)
+     * Danh sách model ưu tiên miễn phí công cộng (Free Serverless API)
+     * Thử lần lượt nếu model trước không phản hồi hoặc bận
      */
     const MODELS = [
-        "Qwen/Qwen2.5-Coder-7B-Instruct",
+        "Qwen/Qwen2.5-Coder-32B-Instruct",
         "Qwen/Qwen2.5-7B-Instruct",
-        "meta-llama/Llama-3.1-8B-Instruct",
-        "mistralai/Mistral-7B-Instruct-v0.3"
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+        "HuggingFaceH4/zephyr-7b-beta",
+        "mistralai/Mistral-7B-Instruct-v0.2"
     ];
 
     /**
@@ -103,6 +105,9 @@ Luôn trả lời bằng tiếng Việt, thân thiện và tích cực.`;
 
     async function testModel(model) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+
             const res = await fetch(HF_API_BASE, {
                 method: "POST",
                 headers: {
@@ -113,9 +118,12 @@ Luôn trả lời bằng tiếng Việt, thân thiện và tích cực.`;
                     model: model,
                     messages: [{ role: "user", content: "Hi" }],
                     max_tokens: 5
-                })
+                }),
+                signal: controller.signal
             });
-            return res.ok;
+            clearTimeout(timeoutId);
+            // res.ok hoặc 503 (model đang khởi động) đều chấp nhận token hợp lệ
+            return res.ok || res.status === 503;
         } catch {
             return false;
         }
@@ -130,7 +138,10 @@ Luôn trả lời bằng tiếng Việt, thân thiện và tích cực.`;
                 return true;
             }
         }
-        return false;
+        // Dự phòng mặc định model đầu tiên nếu các request test bị timeout/CORS
+        _model = MODELS[0];
+        console.log(`[HF-AI] Sử dụng model dự phòng mặc định: ${_model}`);
+        return true;
     }
 
     // ----------------------------------------------------------
@@ -261,8 +272,15 @@ Luôn trả lời bằng tiếng Việt, thân thiện và tích cực.`;
             onDone && onDone(fullAnswer);
 
         } catch (err) {
-            // Nếu stream thất bại → thử non-stream
-            console.warn("[HF-AI] Stream thất bại, thử non-stream...", err.message);
+            // Nếu stream thất bại → thử model dự phòng khác trong danh sách
+            console.warn("[HF-AI] Stream thất bại với model:", _model, err.message);
+            const currentIdx = MODELS.indexOf(_model);
+            if (currentIdx !== -1 && currentIdx < MODELS.length - 1) {
+                _model = MODELS[currentIdx + 1];
+                console.log("[HF-AI] Thử lại với model dự phòng tiếp theo:", _model);
+                _history.pop(); // Xóa tin nhắn user vừa thêm để thử lại
+                return askStream(question, onChunk, onDone, onError);
+            }
             await askNonStream(question, onChunk, onDone, onError);
         }
     }
